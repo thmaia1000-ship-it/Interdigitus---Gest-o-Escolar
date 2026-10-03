@@ -6,11 +6,53 @@ import crypto from 'crypto';
 
 export const apiRouter = Router();
 
-// Cache simples de sessões em memória
+// Segredo para assinatura criptográfica de tokens (stateless)
+const TOKEN_SECRET = process.env.JWT_SECRET || 'interdigitus_school_secure_token_secret_2026';
+
+// Cache em memória opcional para aceleração de instâncias ativas
 const sessions = new Map<string, AuthUser>();
 
-function generateToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+export function signToken(user: AuthUser): string {
+  const payload = {
+    user,
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 dias de validade
+  };
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', TOKEN_SECRET).update(payloadStr).digest('base64url');
+  return `${payloadStr}.${signature}`;
+}
+
+export function verifyToken(token: string): AuthUser | null {
+  try {
+    if (!token) return null;
+
+    // Se estiver em cache na instância local, retorna direto
+    if (sessions.has(token)) {
+      return sessions.get(token)!;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 2) {
+      return null;
+    }
+
+    const [payloadStr, signature] = parts;
+    const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(payloadStr).digest('base64url');
+    if (signature !== expectedSig) {
+      return null;
+    }
+
+    const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
+    if (payload.exp && Date.now() > payload.exp) {
+      return null; // Expirado
+    }
+
+    const user = payload.user as AuthUser;
+    sessions.set(token, user);
+    return user;
+  } catch (e) {
+    return null;
+  }
 }
 
 // Neutralizador de injeção de fórmulas CSV
@@ -31,8 +73,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Sessão expirada ou não autenticado.' });
   }
 
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  const user = sessions.get(token);
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const user = verifyToken(token);
   if (!user) {
     return res.status(401).json({ error: 'Token de autenticação inválido ou expirado.' });
   }
@@ -78,7 +120,7 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique o usuário e a senha.' });
     }
 
-    const token = generateToken();
+    const token = signToken(user);
     const authData: AuthUser = { ...user, token };
     sessions.set(token, authData);
 
@@ -101,7 +143,7 @@ apiRouter.post('/auth/portal-login', (req: Request, res: Response) => {
       return res.status(401).json({ error: 'CPF ou senha do aluno incorretos.' });
     }
 
-    const token = generateToken();
+    const token = signToken(user);
     const authData: AuthUser = { ...user, token };
     sessions.set(token, authData);
 

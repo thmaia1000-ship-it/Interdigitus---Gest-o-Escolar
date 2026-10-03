@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 import { apiRouter } from '../src/server/api.ts';
 
 const app = express();
