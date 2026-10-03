@@ -1,0 +1,6 @@
+{
+  "name": "Interdigitus - Gestão Escolar",
+  "description": "Sistema integrado de gestão escolar acadêmica, financeira e comercial baseado no banco de dados dbinterdigitus.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

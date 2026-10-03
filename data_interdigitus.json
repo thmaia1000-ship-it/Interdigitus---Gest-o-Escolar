@@ -1,0 +1,917 @@
+{
+  "tb_cursos": [
+    {
+      "ID_curso": 1,
+      "nome_curso": "Técnico em Enfermagem"
+    },
+    {
+      "ID_curso": 2,
+      "nome_curso": "Técnico em Radiologia"
+    },
+    {
+      "ID_curso": 3,
+      "nome_curso": "Técnico em Segurança do Trabalho"
+    },
+    {
+      "ID_curso": 4,
+      "nome_curso": "Técnico em Análises Clínicas"
+    },
+    {
+      "ID_curso": 5,
+      "nome_curso": "Especialização Técnica em UTI"
+    }
+  ],
+  "tb_cursoLivre": [
+    {
+      "ID_curso": 1,
+      "nome_curso": "Primeiros Socorros e Suporte Básico de Vida (BLS)",
+      "carga_horaria": 40,
+      "conteudo": "Ressuscitação cardiopulmonar (RCP), desengasgo, imobilizações, controle de hemorragias e uso do DEA."
+    },
+    {
+      "ID_curso": 2,
+      "nome_curso": "Cálculo e Administração de Medicamentos",
+      "carga_horaria": 30,
+      "conteudo": "Regra de três aplicada, dosagem pediátrica e adulta, diluição de antibióticos e vias de administração parenteral."
+    },
+    {
+      "ID_curso": 3,
+      "nome_curso": "Punção Venosa e Coleta de Sangue a Vácuo",
+      "carga_horaria": 24,
+      "conteudo": "Técnicas de punção, anatomia vascular periférica, acidentes de punção e biossegurança na coleta."
+    },
+    {
+      "ID_curso": 4,
+      "nome_curso": "Instrumentação Cirúrgica Básica",
+      "carga_horaria": 60,
+      "conteudo": "Tempos cirúrgicos, montagem de mesa, antissepsia, paramentação e instrumentos cirúrgicos fundamentais."
+    }
+  ],
+  "tb_materias": [
+    {
+      "ID_materia": 1,
+      "materia": "Anatomia e Fisiologia Humana",
+      "idcurso": 1
+    },
+    {
+      "ID_materia": 2,
+      "materia": "Farmacologia Aplicada",
+      "idcurso": 1
+    },
+    {
+      "ID_materia": 3,
+      "materia": "Fundamentos de Enfermagem",
+      "idcurso": 1
+    },
+    {
+      "ID_materia": 4,
+      "materia": "Saúde Coletiva e Epidemiologia",
+      "idcurso": 1
+    },
+    {
+      "ID_materia": 5,
+      "materia": "Física das Radiações",
+      "idcurso": 2
+    },
+    {
+      "ID_materia": 6,
+      "materia": "Técnicas Radiológicas I",
+      "idcurso": 2
+    },
+    {
+      "ID_materia": 7,
+      "materia": "Proteção Radiológica",
+      "idcurso": 2
+    },
+    {
+      "ID_materia": 8,
+      "materia": "Legislação e Normas Regulamentadoras (NRs)",
+      "idcurso": 3
+    },
+    {
+      "ID_materia": 9,
+      "materia": "Higiene Ocupacional e Riscos Ambientais",
+      "idcurso": 3
+    },
+    {
+      "ID_materia": 10,
+      "materia": "Microbiologia e Parasitologia Clínica",
+      "idcurso": 4
+    }
+  ],
+  "tb_turmas": [
+    {
+      "ID_turma": 1,
+      "turma": "ENF-2025-1M",
+      "sala": "Sala 102",
+      "turno": "Manhã",
+      "status_turma": "A",
+      "idcurso": 1
+    },
+    {
+      "ID_turma": 2,
+      "turma": "ENF-2025-1N",
+      "sala": "Sala 103",
+      "turno": "Noite",
+      "status_turma": "A",
+      "idcurso": 1
+    },
+    {
+      "ID_turma": 3,
+      "turma": "RAD-2025-1N",
+      "sala": "Laboratório 01",
+      "turno": "Noite",
+      "status_turma": "A",
+      "idcurso": 2
+    },
+    {
+      "ID_turma": 4,
+      "turma": "SEG-2025-1S",
+      "sala": "Sala 204",
+      "turno": "Sábado",
+      "status_turma": "A",
+      "idcurso": 3
+    },
+    {
+      "ID_turma": 5,
+      "turma": "ANA-2024-2N",
+      "sala": "Laboratório 02",
+      "turno": "Noite",
+      "status_turma": "F",
+      "idcurso": 4
+    }
+  ],
+  "tb_alunos": [
+    {
+      "ID_aluno": 1,
+      "nome_aluno": "Camila Ferreira dos Santos",
+      "email": "camila.santos@email.com",
+      "cpf": "234.567.890-12",
+      "rg": "34.567.890-X",
+      "orgao_emissor": "SSP/SP",
+      "data_emissao": "2018-05-14",
+      "datanasc": "1998-07-22",
+      "UF": "SP",
+      "cidade": "São Paulo",
+      "nacionalidade": "Brasileira",
+      "rua": "Rua das Palmeiras",
+      "bairro": "Vila Mariana",
+      "cep": "04012-010",
+      "numero": "245",
+      "telefone": "(11) 98123-4567",
+      "mae": "Marlene Ferreira dos Santos",
+      "idcurso": 1,
+      "dias_aula": "Seg a Sex",
+      "turno": "Manhã",
+      "ensino_medio": "E.E. Padre Manuel da Nóbrega",
+      "ano_conclusao": "2016",
+      "observacao": "Aluna com excelente aproveitamento e pontualidade.",
+      "sistec": "20250100412",
+      "livro_ata": "Livro 14",
+      "registro": "REG-8841",
+      "pagina": "Folha 32",
+      "codigo": "MAT-2025001",
+      "inicio_curso": "05/02/2025",
+      "fim_curso": "15/12/2026",
+      "data_conclusao_curso": null,
+      "carga_horaria": "1600h",
+      "status": "Ativo",
+      "data_gerada": "2025-01-15",
+      "usuario": "marcia.secretaria"
+    },
+    {
+      "ID_aluno": 2,
+      "nome_aluno": "Lucas Gabriel de Oliveira",
+      "email": "lucas.oliveira@email.com",
+      "cpf": "345.678.901-23",
+      "rg": "45.678.901-2",
+      "orgao_emissor": "SSP/SP",
+      "data_emissao": "2019-09-10",
+      "datanasc": "2001-03-15",
+      "UF": "SP",
+      "cidade": "São Bernardo do Campo",
+      "nacionalidade": "Brasileira",
+      "rua": "Avenida Kennedy",
+      "bairro": "Anchieta",
+      "cep": "09726-250",
+      "numero": "1080",
+      "telefone": "(11) 97234-8901",
+      "mae": "Regina Célia de Oliveira",
+      "idcurso": 1,
+      "dias_aula": "Seg a Sex",
+      "turno": "Noite",
+      "ensino_medio": "Colégio Estadual São Paulo",
+      "ano_conclusao": "2019",
+      "observacao": "Aproveitamento de estudos na disciplina de Anatomia.",
+      "sistec": "20250100413",
+      "livro_ata": "Livro 14",
+      "registro": "REG-8842",
+      "pagina": "Folha 32",
+      "codigo": "MAT-2025002",
+      "inicio_curso": "05/02/2025",
+      "fim_curso": "15/12/2026",
+      "data_conclusao_curso": null,
+      "carga_horaria": "1600h",
+      "status": "Ativo",
+      "data_gerada": "2025-01-16",
+      "usuario": "marcia.secretaria"
+    },
+    {
+      "ID_aluno": 3,
+      "nome_aluno": "Beatriz Lima Albuquerque",
+      "email": "beatriz.lima@email.com",
+      "cpf": "456.789.012-34",
+      "rg": "52.123.456-7",
+      "orgao_emissor": "DETRAN/RJ",
+      "data_emissao": "2017-11-20",
+      "datanasc": "1996-12-04",
+      "UF": "SP",
+      "cidade": "Santo André",
+      "nacionalidade": "Brasileira",
+      "rua": "Rua Cel. Oliveira Lima",
+      "bairro": "Centro",
+      "cep": "09010-010",
+      "numero": "350",
+      "telefone": "(11) 99876-5432",
+      "mae": "Eliana Lima Albuquerque",
+      "idcurso": 2,
+      "dias_aula": "Seg a Sex",
+      "turno": "Noite",
+      "ensino_medio": "Colégio Objetivo",
+      "ano_conclusao": "2014",
+      "observacao": "Trabalha em clínica médica como recepcionista.",
+      "sistec": "20250100414",
+      "livro_ata": "Livro 14",
+      "registro": "REG-8843",
+      "pagina": "Folha 33",
+      "codigo": "MAT-2025003",
+      "inicio_curso": "10/02/2025",
+      "fim_curso": "20/12/2026",
+      "data_conclusao_curso": null,
+      "carga_horaria": "1400h",
+      "status": "Ativo",
+      "data_gerada": "2025-01-18",
+      "usuario": "marcia.secretaria"
+    },
+    {
+      "ID_aluno": 4,
+      "nome_aluno": "Rodrigo Mendonça Prado",
+      "email": "rodrigo.prado@email.com",
+      "cpf": "567.890.123-45",
+      "rg": "28.987.654-1",
+      "orgao_emissor": "SSP/SP",
+      "data_emissao": "2015-04-03",
+      "datanasc": "1994-08-30",
+      "UF": "SP",
+      "cidade": "São Caetano do Sul",
+      "nacionalidade": "Brasileira",
+      "rua": "Rua Goitacazes",
+      "bairro": "Centro",
+      "cep": "09510-300",
+      "numero": "77",
+      "telefone": "(11) 98456-1122",
+      "mae": "Sônia Maria Mendonça",
+      "idcurso": 3,
+      "dias_aula": "Sábado",
+      "turno": "Sábado",
+      "ensino_medio": "E.E. Bonifacio de Andrada",
+      "ano_conclusao": "2012",
+      "observacao": "Empresa custeia 50% das mensalidades.",
+      "sistec": "20250100415",
+      "livro_ata": "Livro 14",
+      "registro": "REG-8844",
+      "pagina": "Folha 33",
+      "codigo": "MAT-2025004",
+      "inicio_curso": "15/02/2025",
+      "fim_curso": "10/12/2026",
+      "data_conclusao_curso": null,
+      "carga_horaria": "1200h",
+      "status": "Ativo",
+      "data_gerada": "2025-01-20",
+      "usuario": "marcia.secretaria"
+    },
+    {
+      "ID_aluno": 5,
+      "nome_aluno": "Juliana Castro Ribeiro",
+      "email": "juliana.ribeiro@email.com",
+      "cpf": "678.901.234-56",
+      "rg": "39.444.555-8",
+      "orgao_emissor": "SSP/MG",
+      "data_emissao": "2016-08-12",
+      "datanasc": "1997-02-18",
+      "UF": "SP",
+      "cidade": "São Paulo",
+      "nacionalidade": "Brasileira",
+      "rua": "Rua Domingos de Morais",
+      "bairro": "Vila Mariana",
+      "cep": "04009-002",
+      "numero": "1540",
+      "telefone": "(11) 97711-2233",
+      "mae": "Cleide Castro Ribeiro",
+      "idcurso": 4,
+      "dias_aula": "Seg a Sex",
+      "turno": "Noite",
+      "ensino_medio": "Colégio Tiradentes",
+      "ano_conclusao": "2015",
+      "observacao": "Concluiu com êxito todas as disciplinas e estágio.",
+      "sistec": "20240200388",
+      "livro_ata": "Livro 13",
+      "registro": "REG-8120",
+      "pagina": "Folha 18",
+      "codigo": "MAT-2024098",
+      "inicio_curso": "01/08/2023",
+      "fim_curso": "15/12/2024",
+      "data_conclusao_curso": "15/12/2024",
+      "carga_horaria": "1400h",
+      "status": "Concluído",
+      "data_gerada": "2023-07-25",
+      "usuario": "marcia.secretaria"
+    }
+  ],
+  "tb_responsavel_financeiro": [
+    {
+      "ID_responsavel_financeiro": 1,
+      "nome": "Marlene Ferreira dos Santos",
+      "CPF": "111.222.333-44",
+      "RG": "12.345.678-9",
+      "idaluno": 1
+    },
+    {
+      "ID_responsavel_financeiro": 2,
+      "nome": "Regina Célia de Oliveira",
+      "CPF": "222.333.444-55",
+      "RG": "23.456.789-0",
+      "idaluno": 2
+    },
+    {
+      "ID_responsavel_financeiro": 3,
+      "nome": "Beatriz Lima Albuquerque (Própria)",
+      "CPF": "456.789.012-34",
+      "RG": "52.123.456-7",
+      "idaluno": 3
+    }
+  ],
+  "tb_notas": [
+    {
+      "ID_nota": 1,
+      "aluno": "Camila Ferreira dos Santos",
+      "materia": "Anatomia e Fisiologia Humana",
+      "nota1": "9.0",
+      "nota2": "8.5",
+      "media": "8.8",
+      "situacao": "Aprovado",
+      "idaluno": 1,
+      "idcurso": 1,
+      "idmateria": 1,
+      "data_gerada": "2025-04-10",
+      "usuario": "prof.andre"
+    },
+    {
+      "ID_nota": 2,
+      "aluno": "Camila Ferreira dos Santos",
+      "materia": "Farmacologia Aplicada",
+      "nota1": "8.0",
+      "nota2": "7.5",
+      "media": "7.8",
+      "situacao": "Aprovado",
+      "idaluno": 1,
+      "idcurso": 1,
+      "idmateria": 2,
+      "data_gerada": "2025-05-20",
+      "usuario": "prof.andre"
+    },
+    {
+      "ID_nota": 3,
+      "aluno": "Lucas Gabriel de Oliveira",
+      "materia": "Anatomia e Fisiologia Humana",
+      "nota1": "6.5",
+      "nota2": "7.0",
+      "media": "6.8",
+      "situacao": "Aprovado",
+      "idaluno": 2,
+      "idcurso": 1,
+      "idmateria": 1,
+      "data_gerada": "2025-04-10",
+      "usuario": "prof.andre"
+    },
+    {
+      "ID_nota": 4,
+      "aluno": "Beatriz Lima Albuquerque",
+      "materia": "Física das Radiações",
+      "nota1": "8.5",
+      "nota2": "9.0",
+      "media": "8.8",
+      "situacao": "Aprovado",
+      "idaluno": 3,
+      "idcurso": 2,
+      "idmateria": 5,
+      "data_gerada": "2025-04-15",
+      "usuario": "prof.marcelo"
+    },
+    {
+      "ID_nota": 5,
+      "aluno": "Rodrigo Mendonça Prado",
+      "materia": "Legislação e Normas Regulamentadoras (NRs)",
+      "nota1": "5.5",
+      "nota2": "6.0",
+      "media": "5.8",
+      "situacao": "Exame",
+      "idaluno": 4,
+      "idcurso": 3,
+      "idmateria": 8,
+      "data_gerada": "2025-05-18",
+      "usuario": "prof.valeria"
+    }
+  ],
+  "tb_mensalidades": [
+    {
+      "ID_mensalidade": 1,
+      "entrada": 350,
+      "n_parcelas": "18",
+      "valor_total": 6300,
+      "saldo_devedor": 4550,
+      "valor_parcela": 350,
+      "data_pagar": "2025-02-10",
+      "data_inicio": "2025-02-01",
+      "data_fim": "2026-07-30",
+      "parcelas_pagas": "5",
+      "data_gerada": "2025-01-20",
+      "usuario": "marcia.secretaria",
+      "horario": "14:20",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 1
+    },
+    {
+      "ID_mensalidade": 2,
+      "entrada": 350,
+      "n_parcelas": "18",
+      "valor_total": 6300,
+      "saldo_devedor": 4900,
+      "valor_parcela": 350,
+      "data_pagar": "2025-02-10",
+      "data_inicio": "2025-02-01",
+      "data_fim": "2026-07-30",
+      "parcelas_pagas": "4",
+      "data_gerada": "2025-01-22",
+      "usuario": "marcia.secretaria",
+      "horario": "15:10",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 2
+    },
+    {
+      "ID_mensalidade": 3,
+      "entrada": 400,
+      "n_parcelas": "18",
+      "valor_total": 7200,
+      "saldo_devedor": 5600,
+      "valor_parcela": 400,
+      "data_pagar": "2025-02-15",
+      "data_inicio": "2025-02-01",
+      "data_fim": "2026-07-30",
+      "parcelas_pagas": "4",
+      "data_gerada": "2025-01-25",
+      "usuario": "marcia.secretaria",
+      "horario": "11:05",
+      "curso": "Técnico em Radiologia",
+      "idaluno": 3
+    },
+    {
+      "ID_mensalidade": 4,
+      "entrada": 320,
+      "n_parcelas": "18",
+      "valor_total": 5760,
+      "saldo_devedor": 4800,
+      "valor_parcela": 320,
+      "data_pagar": "2025-02-10",
+      "data_inicio": "2025-02-01",
+      "data_fim": "2026-07-30",
+      "parcelas_pagas": "3",
+      "data_gerada": "2025-01-28",
+      "usuario": "marcia.secretaria",
+      "horario": "16:45",
+      "curso": "Técnico em Segurança do Trabalho",
+      "idaluno": 4
+    }
+  ],
+  "tb_caixa": [
+    {
+      "ID_caixa": 1,
+      "valor_total": 350,
+      "forma": "PIX",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Mensalidade parcela 05/18 - Camila Ferreira",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-08",
+      "horario": "10:35",
+      "nome": "Camila Ferreira dos Santos",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 1,
+      "mensalidades_pagas": 5,
+      "idmensalidade": 1
+    },
+    {
+      "ID_caixa": 2,
+      "valor_total": 350,
+      "forma": "Boleto",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Mensalidade parcela 04/18 - Lucas Gabriel",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-10",
+      "horario": "14:22",
+      "nome": "Lucas Gabriel de Oliveira",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 2,
+      "mensalidades_pagas": 4,
+      "idmensalidade": 2
+    },
+    {
+      "ID_caixa": 3,
+      "valor_total": 400,
+      "forma": "Cartão Crédito",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Mensalidade parcela 04/18 - Beatriz Lima",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-12",
+      "horario": "16:05",
+      "nome": "Beatriz Lima Albuquerque",
+      "curso": "Técnico em Radiologia",
+      "idaluno": 3,
+      "mensalidades_pagas": 4,
+      "idmensalidade": 3
+    },
+    {
+      "ID_caixa": 4,
+      "valor_total": 180,
+      "forma": "Dinheiro",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Venda de Uniforme e Jaleco de Laboratório",
+      "usuario": "patricia.balcao",
+      "data": "2025-05-14",
+      "horario": "11:40",
+      "nome": "Aluno Balcão",
+      "curso": null,
+      "idaluno": null,
+      "mensalidades_pagas": null,
+      "idmensalidade": null
+    },
+    {
+      "ID_caixa": 5,
+      "valor_total": 120,
+      "forma": "Dinheiro",
+      "tipo_movimentacao": "Saída",
+      "descricao": "Compra emergencial de toner para impressora da secretaria",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-15",
+      "horario": "15:10",
+      "nome": "Kalunga Papelaria",
+      "curso": null,
+      "idaluno": null,
+      "mensalidades_pagas": null,
+      "idmensalidade": null
+    }
+  ],
+  "log_caixa": [
+    {
+      "ID_log_caixa": 1,
+      "valor_total": 350,
+      "forma": "PIX",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Mensalidade parcela 05/18 - Camila Ferreira",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-08",
+      "horario": "10:35",
+      "nome": "Camila Ferreira dos Santos",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 1,
+      "mensalidades_pagas": 5,
+      "idmensalidade": 1,
+      "justificativa": "Recebimento de mensalidade regular via PIX chave CNPJ",
+      "tipo": "RECEBIMENTO_MENSALIDADE",
+      "data_log": "2025-05-08",
+      "usuario_log": "claudia.financeiro"
+    },
+    {
+      "ID_log_caixa": 2,
+      "valor_total": 350,
+      "forma": "Boleto",
+      "tipo_movimentacao": "Entrada",
+      "descricao": "Mensalidade parcela 04/18 - Lucas Gabriel",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-10",
+      "horario": "14:22",
+      "nome": "Lucas Gabriel de Oliveira",
+      "curso": "Técnico em Enfermagem",
+      "idaluno": 2,
+      "mensalidades_pagas": 4,
+      "idmensalidade": 2,
+      "justificativa": "Liquidação de boleto bancário banco Santander",
+      "tipo": "RECEBIMENTO_MENSALIDADE",
+      "data_log": "2025-05-10",
+      "usuario_log": "claudia.financeiro"
+    },
+    {
+      "ID_log_caixa": 3,
+      "valor_total": 120,
+      "forma": "Dinheiro",
+      "tipo_movimentacao": "Saída",
+      "descricao": "Compra emergencial de toner para impressora da secretaria",
+      "usuario": "claudia.financeiro",
+      "data": "2025-05-15",
+      "horario": "15:10",
+      "nome": "Kalunga Papelaria",
+      "curso": null,
+      "idaluno": null,
+      "mensalidades_pagas": null,
+      "idmensalidade": null,
+      "justificativa": "Nota fiscal 45892 apresentada pelo setor de suprimentos",
+      "tipo": "DESPESA_CAIXA",
+      "data_log": "2025-05-15",
+      "usuario_log": "claudia.financeiro"
+    }
+  ],
+  "tb_despesas": [
+    {
+      "ID_despesa": 1,
+      "tipo": "Material de Consumo",
+      "descricao": "Resmas de papel A4 e materiais de escritório",
+      "valor": 450,
+      "data": "2025-05-02",
+      "observacoes": "NF 12089 - Distribuidora Central",
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-05-02"
+    },
+    {
+      "ID_despesa": 2,
+      "tipo": "Serviços Públicos",
+      "descricao": "Conta de Energia Elétrica Enel",
+      "valor": 1850.3,
+      "data": "2025-05-05",
+      "observacoes": "Vencimento 10/05/2025 - Sede Principal",
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-05-05"
+    },
+    {
+      "ID_despesa": 3,
+      "tipo": "Manutenção",
+      "descricao": "Manutenção preventiva dos aparelhos de ar-condicionado",
+      "valor": 980,
+      "data": "2025-05-12",
+      "observacoes": "Climatiza Ar Condicionado ME",
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-05-12"
+    }
+  ],
+  "tb_professores": [
+    {
+      "ID_professor": 1,
+      "nome_professor": "Dr. André Carvalho Moreira",
+      "telefone": "(11) 98321-7788"
+    },
+    {
+      "ID_professor": 2,
+      "nome_professor": "Prof. Marcelo de Souza Santos",
+      "telefone": "(11) 97456-1133"
+    },
+    {
+      "ID_professor": 3,
+      "nome_professor": "Profa. Valéria Cristina Dias",
+      "telefone": "(11) 98112-9900"
+    },
+    {
+      "ID_professor": 4,
+      "nome_professor": "Profa. Dra. Mariana Brandão",
+      "telefone": "(11) 99345-6677"
+    }
+  ],
+  "tb_pagamentos": [
+    {
+      "ID_pagamento": 1,
+      "valor_total": 2400,
+      "valor_pendente": 1200,
+      "pagamento": "Mensal",
+      "professor": "Dr. André Carvalho Moreira",
+      "turma": "ENF-2025-1M",
+      "materia": "Anatomia e Fisiologia Humana",
+      "carga_horaria": "60h",
+      "idprofessor": 1,
+      "idmateria": 1,
+      "idcurso": 1,
+      "descricao": "Módulo I Anatomia - Semestre 2025/1",
+      "data_inicio": "2025-02-05",
+      "data_fim": "2025-06-30",
+      "data_pagou": "2025-04-05",
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-02-01",
+      "tipo": "Hora/Aula"
+    },
+    {
+      "ID_pagamento": 2,
+      "valor_total": 2800,
+      "valor_pendente": 0,
+      "pagamento": "Mensal",
+      "professor": "Prof. Marcelo de Souza Santos",
+      "turma": "RAD-2025-1N",
+      "materia": "Física das Radiações",
+      "carga_horaria": "70h",
+      "idprofessor": 2,
+      "idmateria": 5,
+      "idcurso": 2,
+      "descricao": "Módulo I Radiologia Industrial e Médica",
+      "data_inicio": "2025-02-10",
+      "data_fim": "2025-06-30",
+      "data_pagou": "2025-05-05",
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-02-05",
+      "tipo": "Hora/Aula"
+    },
+    {
+      "ID_pagamento": 3,
+      "valor_total": 2000,
+      "valor_pendente": 2000,
+      "pagamento": "Mensal",
+      "professor": "Profa. Valéria Cristina Dias",
+      "turma": "SEG-2025-1S",
+      "materia": "Legislação e Normas Regulamentadoras (NRs)",
+      "carga_horaria": "50h",
+      "idprofessor": 3,
+      "idmateria": 8,
+      "idcurso": 3,
+      "descricao": "Aulas aos sábados módulo NR 1 a NR 37",
+      "data_inicio": "2025-02-15",
+      "data_fim": "2025-07-10",
+      "data_pagou": null,
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-02-10",
+      "tipo": "Hora/Aula"
+    }
+  ],
+  "tb_pagamentos_parciais": [
+    {
+      "ID_pagamento_parcial": 1,
+      "valor": 1200,
+      "idpagamento": 1,
+      "idprofessor": 1,
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-04-05",
+      "tipo": "Transferência PIX"
+    },
+    {
+      "ID_pagamento_parcial": 2,
+      "valor": 1400,
+      "idpagamento": 2,
+      "idprofessor": 2,
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-04-05",
+      "tipo": "Transferência TED"
+    },
+    {
+      "ID_pagamento_parcial": 3,
+      "valor": 1400,
+      "idpagamento": 2,
+      "idprofessor": 2,
+      "usuario": "claudia.financeiro",
+      "data_gerada": "2025-05-05",
+      "tipo": "Transferência TED"
+    }
+  ],
+  "tb_produtos": [
+    {
+      "ID_produto": 1,
+      "produto": "Jaleco Branco Bordado Logo Interdigitus P/M/G",
+      "descricao": "Jaleco de brim leve com manga longa e bordado da instituição",
+      "valor_custo": 55,
+      "valor_venda": 95,
+      "estoque": 42,
+      "data_gerada": "2025-01-10",
+      "usuario": "marcos.comercial"
+    },
+    {
+      "ID_produto": 2,
+      "produto": "Kit Esfigmomanômetro com Estetoscópio",
+      "descricao": "Aparelho de pressão com esteto duplo e estojo com zíper",
+      "valor_custo": 80,
+      "valor_venda": 140,
+      "estoque": 18,
+      "data_gerada": "2025-01-10",
+      "usuario": "marcos.comercial"
+    },
+    {
+      "ID_produto": 3,
+      "produto": "Manual de Estágio e Biossegurança Hospitalar",
+      "descricao": "Apostila impressa e encadernada oficial do curso",
+      "valor_custo": 18,
+      "valor_venda": 35,
+      "estoque": 65,
+      "data_gerada": "2025-01-15",
+      "usuario": "marcos.comercial"
+    },
+    {
+      "ID_produto": 4,
+      "produto": "Fita Métrica Anatômica e Garrote Elástico",
+      "descricao": "Acessórios para aula prática de enfermagem",
+      "valor_custo": 12,
+      "valor_venda": 25,
+      "estoque": 8,
+      "data_gerada": "2025-01-15",
+      "usuario": "marcos.comercial"
+    }
+  ],
+  "tb_vendas": [
+    {
+      "ID_venda": 1,
+      "produto": "Jaleco Branco Bordado Logo Interdigitus P/M/G",
+      "valor_total": 95,
+      "quantidade": 1,
+      "observacao": "Tamanho M - Aluna Camila",
+      "nome": "Camila Ferreira dos Santos",
+      "idcliente": 1,
+      "usuario": "patricia.balcao",
+      "data_gerada": "2025-02-06",
+      "codigovenda": 1001,
+      "idproduto": 1
+    },
+    {
+      "ID_venda": 2,
+      "produto": "Manual de Estágio e Biossegurança Hospitalar",
+      "valor_total": 35,
+      "quantidade": 1,
+      "observacao": "Item 2 do pedido",
+      "nome": "Camila Ferreira dos Santos",
+      "idcliente": 1,
+      "usuario": "patricia.balcao",
+      "data_gerada": "2025-02-06",
+      "codigovenda": 1001,
+      "idproduto": 3
+    },
+    {
+      "ID_venda": 3,
+      "produto": "Kit Esfigmomanômetro com Estetoscópio",
+      "valor_total": 140,
+      "quantidade": 1,
+      "observacao": "Pagamento à vista no balcão",
+      "nome": "Lucas Gabriel de Oliveira",
+      "idcliente": 2,
+      "usuario": "patricia.balcao",
+      "data_gerada": "2025-02-08",
+      "codigovenda": 1002,
+      "idproduto": 2
+    }
+  ],
+  "tb_usuarios": [
+    {
+      "ID_usuario": 1,
+      "nome_usuario": "Administrador do Sistema",
+      "username": "admin",
+      "senha": "9ea6325a01d782b8e7426559b6e9c2e861ea85d820333f8683a4e75dd808d1b1",
+      "nivel_usuario": 1
+    },
+    {
+      "ID_usuario": 2,
+      "nome_usuario": "Márcia Secretária",
+      "username": "secretaria",
+      "senha": "6986ee94941c5cfd6e8a8dc1189a73f38af41bf72b98e940c1cc35635fb6b232",
+      "nivel_usuario": 2
+    },
+    {
+      "ID_usuario": 3,
+      "nome_usuario": "Prof. Coordenador Carlos",
+      "username": "coordenacao",
+      "senha": "1f4250e953282aaddc84f0258abb775f385539997fe4b6c2265a15b2f046f05e",
+      "nivel_usuario": 3
+    },
+    {
+      "ID_usuario": 4,
+      "nome_usuario": "Cláudia Financeiro",
+      "username": "financeiro",
+      "senha": "1996a9ea9abc4ffb8faf43e6275a397792f37b8ba4e05edd1d73f7b97f90219d",
+      "nivel_usuario": 4
+    },
+    {
+      "ID_usuario": 5,
+      "nome_usuario": "Marcos Comercial",
+      "username": "comercial",
+      "senha": "b467e76eaf4bcfedad493e4956f70eddc18ba882c7fdd0b6bfa3b12ecea9cdf5",
+      "nivel_usuario": 5
+    }
+  ],
+  "tb_contas": [
+    {
+      "ID_conta": 1,
+      "cpf": "234.567.890-12",
+      "senha": "b98bd5b1bc036f8a9d49e84acb0fffd50df405a1cc6b776844e292680498ce3c",
+      "idaluno": 1
+    },
+    {
+      "ID_conta": 2,
+      "cpf": "345.678.901-23",
+      "senha": "b98bd5b1bc036f8a9d49e84acb0fffd50df405a1cc6b776844e292680498ce3c",
+      "idaluno": 2
+    },
+    {
+      "ID_conta": 3,
+      "cpf": "456.789.012-34",
+      "senha": "b98bd5b1bc036f8a9d49e84acb0fffd50df405a1cc6b776844e292680498ce3c",
+      "idaluno": 3
+    }
+  ]
+}
