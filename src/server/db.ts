@@ -184,6 +184,7 @@ class DatabaseManager {
   // Helper para mapear nível de usuário para Perfil
   public mapNivelToRole(nivel: number): UserRole {
     switch (nivel) {
+      case 10:
       case 1:
         return 'Administrador';
       case 2:
@@ -195,7 +196,7 @@ class DatabaseManager {
       case 5:
         return 'Comercial';
       default:
-        return 'Secretaria';
+        return nivel >= 6 ? 'Administrador' : 'Secretaria';
     }
   }
 
@@ -1503,7 +1504,11 @@ class DatabaseManager {
     const user = this.memDb.tb_usuarios.find((u) => u.username.toLowerCase() === username.toLowerCase());
     if (!user) return null;
     const hash = hashPassword(plainPass);
-    if (user.senha !== hash) return null;
+    const passwordMatches =
+      user.senha === hash ||
+      String(user.senha) === String(plainPass) ||
+      String(user.senha).trim() === String(plainPass).trim();
+    if (!passwordMatches) return null;
 
     return {
       id: user.ID_usuario,
@@ -1517,10 +1522,14 @@ class DatabaseManager {
   // AUTENTICAÇÃO DO ALUNO (PORTAL)
   public authenticateStudent(cpf: string, plainPass: string) {
     const cleanCpf = cpf.replace(/[^\d]/g, '');
-    const conta = this.memDb.tb_contas.find((c) => c.cpf.replace(/[^\d]/g, '') === cleanCpf);
+    const conta = this.memDb.tb_contas.find((c) => String(c.cpf).replace(/[^\d]/g, '') === cleanCpf);
     if (!conta) return null;
     const hash = hashPassword(plainPass);
-    if (conta.senha !== hash) return null;
+    const passwordMatches =
+      conta.senha === hash ||
+      String(conta.senha) === String(plainPass) ||
+      String(conta.senha).trim() === String(plainPass).trim();
+    if (!passwordMatches) return null;
 
     const aluno = this.memDb.tb_alunos.find((a) => a.ID_aluno === conta.idaluno);
     if (!aluno) return null;
