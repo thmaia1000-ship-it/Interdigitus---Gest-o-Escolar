@@ -147,7 +147,7 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Distribuição de Alunos por Curso</h2>
-              <p className="text-xs text-slate-500">Mapeamento em tempo real via tabela <code className="font-mono">tb_cursos</code></p>
+              <p className="text-xs text-slate-500">Mapeamento acadêmico em tempo real</p>
             </div>
             <button
               onClick={() => onNavigate('/academico/cursos')}
@@ -216,9 +216,9 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
 
           {/* Card Pendências Docentes */}
           <div className="bg-white p-5 rounded-xl border border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900 mb-1">Pendências Docentes (Legado)</h2>
+            <h2 className="text-sm font-bold text-slate-900 mb-1">Pendências Docentes</h2>
             <p className="text-xs text-slate-500 mb-3">
-              Soma dos campos <code className="font-mono">valor_pendente</code> em <code className="font-mono">tb_pagamentos</code>
+              Total acumulado em aberto de compromissos docentes
             </p>
             <div className="text-xl font-bold text-slate-900">
               {formatMoney(stats?.financeiro?.totalPendenciasProfessores)}

@@ -35,7 +35,7 @@ export const PagamentosParciaisView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Histórico de Pagamentos Parciais</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Lançamentos executados e baixas parciais da tabela <code className="font-mono text-indigo-600">tb_pagamentos_parciais</code>
+            Lançamentos executados e baixas parciais de pagamentos docentes
           </p>
         </div>
         <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-right">

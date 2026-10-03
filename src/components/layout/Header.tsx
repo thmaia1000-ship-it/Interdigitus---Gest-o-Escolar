@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPath }) => {
       '/pessoas/professores': 'Pessoas / Cadastro de Professores',
       '/administracao/usuarios': 'Administração / Usuários Internos',
       '/administracao/contas-alunos': 'Administração / Contas de Alunos',
-      '/administracao/auditoria-caixa': 'Administração / Auditoria do Caixa (log_caixa)',
+      '/administracao/auditoria-caixa': 'Administração / Auditoria do Caixa',
       '/relatorios': 'Relatórios & Exportações',
       '/portal-aluno': 'Portal Restrito do Aluno',
     };
@@ -68,14 +68,14 @@ export const Header: React.FC<HeaderProps> = ({ currentPath }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Indicador do Banco dbinterdigitus */}
+        {/* Indicador do Banco */}
         <button
           onClick={() => setIsDbModalOpen(true)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-          title="Clique para inspecionar as 18 tabelas e status do banco"
+          title="Clique para importar dados e consultar o status do banco"
         >
           <Database className="w-3.5 h-3.5 text-indigo-600" />
-          <span className="hidden md:inline font-mono">dbinterdigitus (18 tabelas)</span>
+          <span className="hidden md:inline font-medium">Banco de Dados</span>
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
         </button>
 

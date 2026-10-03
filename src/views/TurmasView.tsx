@@ -121,7 +121,7 @@ export const TurmasView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Turmas & Salas</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gestão de turmas ativas, salas e turnos da tabela <code className="font-mono text-indigo-600">tb_turmas</code>
+            Gestão de turmas ativas, salas e turnos letivos
           </p>
         </div>
         <button

@@ -93,7 +93,7 @@ export const ProfessoresView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Corpo Docente (Professores)</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cadastro de professores da tabela <code className="font-mono text-indigo-600">tb_professores</code>
+            Cadastro de professores, corpo docente e contatos
           </p>
         </div>
         <button

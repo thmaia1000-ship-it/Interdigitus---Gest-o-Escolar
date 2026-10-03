@@ -158,7 +158,7 @@ export const NotasView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Lançamento de Notas</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Registro acadêmico de notas, médias e situações da tabela <code className="font-mono text-indigo-600">tb_notas</code>
+            Registro acadêmico de avaliações, médias e situações escolares
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -111,7 +111,7 @@ export const CaixaView: React.FC = () => {
       await api.createCaixa(formData);
       setMsg({
         type: 'ok',
-        text: 'Lançamento registrado com sucesso no Caixa e auditado automaticamente no log_caixa!',
+        text: 'Lançamento registrado com sucesso no Caixa e registrado na auditoria!',
       });
       setIsModalOpen(false);
       loadData();
@@ -131,7 +131,7 @@ export const CaixaView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Livro Caixa</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Movimentações financeiras de entrada e saída da tabela <code className="font-mono text-indigo-600">tb_caixa</code>
+            Movimentações financeiras de entrada e saída do fluxo diário
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -366,7 +366,7 @@ export const CaixaView: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Novo Lançamento de Caixa</h2>
-                <p className="text-xs text-slate-500">Auditoria automática garantida via log_caixa</p>
+                <p className="text-xs text-slate-500">Auditoria cronológica automática garantida</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
@@ -470,7 +470,7 @@ export const CaixaView: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Motivo obrigatório registrado no log_caixa"
+                  placeholder="Motivo obrigatório para auditoria"
                   value={formData.justificativa}
                   onChange={(e) => setFormData({ ...formData, justificativa: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg"

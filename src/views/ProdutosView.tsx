@@ -118,7 +118,7 @@ export const ProdutosView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Catálogo de Produtos & Estoque</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gestão de materiais escolares, uniformes e apostilas da tabela <code className="font-mono text-indigo-600">tb_produtos</code>
+            Gestão de materiais escolares, uniformes e apostilas
           </p>
         </div>
         <button

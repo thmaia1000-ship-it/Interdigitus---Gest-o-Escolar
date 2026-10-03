@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Alunos (tb_alunos)
+                Alunos
               </button>
               <button
                 onClick={() => onNavigate('/academico/responsaveis')}
@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Cursos (tb_cursos)
+                Cursos Regulares
               </button>
               <button
                 onClick={() => onNavigate('/academico/cursos-livres')}
@@ -179,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Cursos Livres (tb_cursoLivre)
+                Cursos Livres
               </button>
               <button
                 onClick={() => onNavigate('/academico/disciplinas')}
@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Disciplinas (tb_materias)
+                Disciplinas
               </button>
               <button
                 onClick={() => onNavigate('/academico/turmas')}
@@ -199,7 +199,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Turmas (tb_turmas)
+                Turmas
               </button>
               <button
                 onClick={() => onNavigate('/academico/notas')}
@@ -209,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Notas (tb_notas)
+                Notas & Médias
               </button>
             </div>
           )}
@@ -243,7 +243,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Mensalidades (tb_mensalidades)
+                Mensalidades
               </button>
               <button
                 onClick={() => onNavigate('/financeiro/caixa')}
@@ -253,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Livro Caixa (tb_caixa)
+                Livro Caixa
               </button>
               <button
                 onClick={() => onNavigate('/financeiro/despesas')}
@@ -263,7 +263,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Despesas (tb_despesas)
+                Despesas Operacionais
               </button>
               <button
                 onClick={() => onNavigate('/financeiro/pagamentos-professores')}
@@ -317,7 +317,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Produtos / Estoque (tb_produtos)
+                Produtos / Estoque
               </button>
               <button
                 onClick={() => onNavigate('/comercial/vendas')}
@@ -327,7 +327,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Vendas & Pedidos (tb_vendas)
+                Vendas & Pedidos
               </button>
             </div>
           )}
@@ -375,7 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Usuários Internos (tb_usuarios)
+                Usuários Internos
               </button>
               <button
                 onClick={() => onNavigate('/administracao/contas-alunos')}
@@ -385,7 +385,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Contas de Alunos (tb_contas)
+                Acesso de Alunos
               </button>
               <button
                 onClick={() => onNavigate('/administracao/auditoria-caixa')}
@@ -395,7 +395,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Auditoria do Caixa (log_caixa)
+                Auditoria do Caixa
               </button>
             </div>
           )}

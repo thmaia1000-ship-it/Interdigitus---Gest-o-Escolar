@@ -91,7 +91,7 @@ export const DespesasView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Despesas Administrativas & Operacionais</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Controle de despesas da tabela <code className="font-mono text-indigo-600">tb_despesas</code>
+            Controle de despesas, contas a pagar e custos institucionais
           </p>
         </div>
         <button

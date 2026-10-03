@@ -91,7 +91,7 @@ export const CursosLivresView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Cursos Livres e Extensão</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Catálogo autônomo da tabela <code className="font-mono text-indigo-600">tb_cursoLivre</code> (separado de cursos regulares)
+            Catálogo autônomo de cursos livres e capacitações de curta duração
           </p>
         </div>
         <button

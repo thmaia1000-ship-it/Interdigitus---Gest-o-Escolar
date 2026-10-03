@@ -129,7 +129,7 @@ export const MensalidadesView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Planos de Mensalidades</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gestão de contratos financeiros, parcelas e saldos da tabela <code className="font-mono text-indigo-600">tb_mensalidades</code>
+            Gestão de contratos financeiros, parcelas e saldos de alunos
           </p>
         </div>
         <button
@@ -321,8 +321,8 @@ export const MensalidadesView: React.FC = () => {
                   className="w-4 h-4 text-indigo-600 rounded"
                 />
                 <label htmlFor="chkCaixa" className="text-[11px] text-emerald-950 font-medium">
-                  Gerar lançamento de entrada no <strong>Livro Caixa (tb_caixa)</strong> e registrar no{' '}
-                  <strong>log_caixa</strong>
+                  Gerar lançamento de entrada no <strong>Livro Caixa</strong> e registrar na{' '}
+                  <strong>Auditoria Contábil</strong>
                 </label>
               </div>
 

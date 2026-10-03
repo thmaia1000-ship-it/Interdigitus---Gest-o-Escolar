@@ -114,7 +114,7 @@ export const ResponsaveisView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Responsáveis Financeiros</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cadastro de responsáveis legais e financeiros da tabela <code className="font-mono text-indigo-600">tb_responsavel_financeiro</code>
+            Cadastro e gestão de responsáveis legais e financeiros
           </p>
         </div>
         <button

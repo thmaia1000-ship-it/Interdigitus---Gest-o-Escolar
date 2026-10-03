@@ -132,7 +132,7 @@ export const PagamentosProfessoresView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Compromissos Docentes</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Registro de contratos, valores devidos e pendências da tabela <code className="font-mono text-indigo-600">tb_pagamentos</code>
+            Registro de contratos, valores devidos e pendências de hora/aula
           </p>
         </div>
         <button

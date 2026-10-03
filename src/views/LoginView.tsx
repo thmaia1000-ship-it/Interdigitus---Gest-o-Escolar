@@ -72,7 +72,7 @@ export const LoginView: React.FC = () => {
                 tab === 'operador' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Operador Interno (tb_usuarios)
+              Operador Interno
             </button>
             <button
               type="button"
@@ -84,7 +84,7 @@ export const LoginView: React.FC = () => {
                 tab === 'aluno' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Portal do Aluno (tb_contas)
+              Portal do Aluno
             </button>
           </div>
         </div>

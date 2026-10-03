@@ -125,7 +125,7 @@ export const VendasView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Vendas & Pedidos de Balcão</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Registro de itens vendidos e agrupamento por código da tabela <code className="font-mono text-indigo-600">tb_vendas</code>
+            Registro de itens vendidos e emissão de vendas de balcão
           </p>
         </div>
         <button

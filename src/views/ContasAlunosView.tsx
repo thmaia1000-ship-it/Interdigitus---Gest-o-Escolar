@@ -114,7 +114,7 @@ export const ContasAlunosView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Contas de Acesso dos Alunos</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Credenciais do portal do aluno gerenciadas na tabela <code className="font-mono text-indigo-600">tb_contas</code>
+            Gestão de credenciais e senhas de acesso do portal do aluno
           </p>
         </div>
         <button

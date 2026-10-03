@@ -93,8 +93,8 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Diagnóstico do Banco dbinterdigitus</h2>
-              <p className="text-xs text-slate-500">Mapeamento e verificação das 18 tabelas originais</p>
+              <h2 className="text-lg font-bold text-slate-900">Gerenciador de Dados do Sistema</h2>
+              <p className="text-xs text-slate-500">Módulos operacionais e status da base de dados</p>
             </div>
           </div>
           <button
@@ -116,11 +116,11 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <span>
               {status?.connected
                 ? `Conexão MySQL ativa (${status.databaseName})`
-                : 'Modo Demonstração / Dados Locais Ativo. Todas as 18 tabelas operando com persistência isolada.'}
+                : 'Modo Local Ativo. Todos os módulos operando com persistência integral.'}
             </span>
           </div>
-          <span className="text-[11px] font-mono text-amber-800 bg-amber-100/60 px-2 py-0.5 rounded">
-            {status?.mode === 'mysql' ? 'MySQL 8.x' : 'Engine Local / 18 Tabelas'}
+          <span className="text-[11px] font-medium text-amber-800 bg-amber-100/60 px-2 py-0.5 rounded">
+            {status?.mode === 'mysql' ? 'MySQL 8.x' : 'Base Local'}
           </span>
         </div>
 
@@ -135,18 +135,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             }`}
           >
             <Table2 className="w-4 h-4" />
-            Cobertura das 18 Tabelas ({status?.tables.length || 18})
-          </button>
-          <button
-            onClick={() => setActiveTab('schema')}
-            className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'schema'
-                ? 'border-indigo-600 text-indigo-700 font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            DDL Original
+            Módulos & Contadores ({status?.tables.length || 18})
           </button>
           <button
             onClick={() => setActiveTab('import')}
@@ -160,6 +149,17 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             Importar Dump .SQL
           </button>
           <button
+            onClick={() => setActiveTab('schema')}
+            className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 ${
+              activeTab === 'schema'
+                ? 'border-indigo-600 text-indigo-700 font-semibold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            DDL Original
+          </button>
+          <button
             onClick={() => setActiveTab('env')}
             className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 ${
               activeTab === 'env'
@@ -168,7 +168,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             }`}
           >
             <Database className="w-4 h-4" />
-            Configuração de Conexão MySQL
+            Conexão MySQL
           </button>
         </div>
 
@@ -177,8 +177,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
           {activeTab === 'tables' && (
             <div>
               <p className="text-xs text-slate-600 mb-4">
-                As 18 tabelas do banco <code className="text-indigo-600 font-mono">dbinterdigitus</code> possuem
-                rotas dedicadas de consulta, cadastro, paginação no servidor e regras de validação aplicadas:
+                Todos os módulos operacionais com contagem de registros em tempo real:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {status?.tables.map((t) => (
@@ -188,19 +187,13 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-slate-900">{t.name}</span>
+                        <span className="text-xs font-semibold text-slate-900">{t.description}</span>
                         {t.name === 'log_caixa' && (
                           <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                             Somente Leitura
                           </span>
                         )}
-                        {t.name === 'tb_cursoLivre' && (
-                          <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                            Case-sensitive
-                          </span>
-                        )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">{t.description}</p>
                     </div>
                     <span className="text-xs font-mono font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded shrink-0 ml-2">
                       {t.count} registros

@@ -231,7 +231,7 @@ export const AlunosView: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Cadastro Geral de Alunos</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gerenciamento do prontuário acadêmico e dados cadastrais da tabela <code className="font-mono text-indigo-600">tb_alunos</code>
+            Gerenciamento do prontuário acadêmico e dados cadastrais de alunos
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ export const AlunosView: React.FC = () => {
                 <h2 className="text-base font-bold text-slate-900">
                   {editingAluno ? `Editar Aluno #${editingAluno.ID_aluno}` : 'Cadastrar Novo Aluno'}
                 </h2>
-                <p className="text-xs text-slate-500">Mapeamento integral dos 36 campos de tb_alunos</p>
+                <p className="text-xs text-slate-500">Prontuário integral e dados cadastrais completos</p>
               </div>
               <button
                 onClick={() => setIsFormOpen(false)}
@@ -933,7 +933,7 @@ export const AlunosView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bloco 2: Responsável Financeiro Vinculado (tb_responsavel_financeiro) */}
+              {/* Bloco 2: Responsável Financeiro Vinculado */}
               <div>
                 <h3 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-indigo-600" />
@@ -955,11 +955,11 @@ export const AlunosView: React.FC = () => {
                 )}
               </div>
 
-              {/* Bloco 3: Notas e Avaliações (tb_notas) */}
+              {/* Bloco 3: Notas e Avaliações */}
               <div>
                 <h3 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-1.5">
                   <BookOpen className="w-4 h-4 text-blue-600" />
-                  <span>Histórico de Notas Lançadas (tb_notas)</span>
+                  <span>Histórico de Notas Lançadas</span>
                 </h3>
                 {selectedAlunoDetail.notas?.length > 0 ? (
                   <table className="w-full text-left border border-slate-200 rounded-lg overflow-hidden">
@@ -1001,11 +1001,11 @@ export const AlunosView: React.FC = () => {
                 )}
               </div>
 
-              {/* Bloco 4: Planos de Mensalidade (tb_mensalidades) */}
+              {/* Bloco 4: Planos de Mensalidade */}
               <div>
                 <h3 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-1.5">
                   <Receipt className="w-4 h-4 text-emerald-600" />
-                  <span>Planos Financeiros e Mensalidades (tb_mensalidades)</span>
+                  <span>Planos Financeiros e Mensalidades</span>
                 </h3>
                 {selectedAlunoDetail.mensalidades?.length > 0 ? (
                   <div className="space-y-2">

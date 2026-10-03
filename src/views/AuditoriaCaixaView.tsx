@@ -63,7 +63,7 @@ export const AuditoriaCaixaView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Registro cronológico forense de movimentações da tabela <code className="font-mono text-indigo-600">log_caixa</code>
+            Registro cronológico forense de movimentações e conciliações do fluxo de caixa
           </p>
         </div>
         <a
@@ -80,10 +80,7 @@ export const AuditoriaCaixaView: React.FC = () => {
       <div className="p-4 bg-slate-900 text-slate-200 rounded-xl border border-slate-800 text-xs flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <span className="font-bold text-white">Integridade Conforme Seção 3 e 7:</span> Os registros de{' '}
-          <code className="font-mono text-indigo-300">log_caixa</code> são gerados automaticamente pelo backend para
-          qualquer transação financeira (entradas, saídas ou quitações). Edições e exclusões manuais são estritamente
-          bloqueadas na camada de regras de negócio.
+          <span className="font-bold text-white">Integridade e Trilha Forense:</span> Os registros de auditoria contábil são gerados automaticamente pelo servidor para qualquer transação financeira (entradas, saídas ou quitações). Edições e exclusões manuais são estritamente bloqueadas para garantir a conformidade legal.
         </div>
       </div>
 
