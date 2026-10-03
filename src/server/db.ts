@@ -216,17 +216,48 @@ class DatabaseManager {
     }
   }
 
+  // Esquema canônico das 18 tabelas para INSERTs sem nomes de colunas
+  private static readonly TABLE_COLUMNS: Record<string, string[]> = {
+    tb_cursos: ['ID_curso', 'nome_curso'],
+    tb_cursoLivre: ['ID_curso', 'nome_curso', 'carga_horaria', 'conteudo'],
+    tb_materias: ['ID_materia', 'materia', 'idcurso'],
+    tb_turmas: ['ID_turma', 'turma', 'sala', 'turno', 'status_turma', 'idcurso'],
+    tb_alunos: [
+      'ID_aluno', 'nome_aluno', 'email', 'cpf', 'rg', 'orgao_emissor', 'data_emissao', 'datanasc',
+      'UF', 'cidade', 'nacionalidade', 'rua', 'bairro', 'cep', 'numero', 'telefone', 'mae',
+      'idcurso', 'dias_aula', 'turno', 'ensino_medio', 'ano_conclusao', 'observacao', 'sistec',
+      'livro_ata', 'registro', 'pagina', 'codigo', 'inicio_curso', 'fim_curso', 'data_conclusao_curso',
+      'carga_horaria', 'status', 'data_gerada', 'usuario'
+    ],
+    tb_responsavel_financeiro: ['ID_responsavel_financeiro', 'nome', 'CPF', 'RG', 'idaluno'],
+    tb_notas: ['ID_nota', 'aluno', 'materia', 'nota1', 'nota2', 'media', 'situacao', 'idaluno', 'idcurso', 'idmateria', 'data_gerada', 'usuario'],
+    tb_mensalidades: ['ID_mensalidade', 'entrada', 'n_parcelas', 'valor_total', 'saldo_devedor', 'valor_parcela', 'data_pagar', 'data_inicio', 'data_fim', 'parcelas_pagas', 'data_gerada', 'usuario', 'horario', 'curso', 'idaluno'],
+    tb_caixa: ['ID_caixa', 'valor_total', 'forma', 'tipo_movimentacao', 'descricao', 'usuario', 'data', 'horario', 'nome', 'curso', 'idaluno', 'mensalidades_pagas', 'idmensalidade'],
+    log_caixa: ['ID_log_caixa', 'valor_total', 'forma', 'tipo_movimentacao', 'descricao', 'usuario', 'data', 'horario', 'nome', 'curso', 'idaluno', 'mensalidades_pagas', 'idmensalidade', 'justificativa', 'tipo', 'data_log', 'usuario_log'],
+    tb_despesas: ['ID_despesa', 'tipo', 'descricao', 'valor', 'data', 'observacoes', 'usuario', 'data_gerada'],
+    tb_professores: ['ID_professor', 'nome_professor', 'telefone'],
+    tb_pagamentos: ['ID_pagamento', 'valor_total', 'valor_pendente', 'pagamento', 'professor', 'turma', 'materia', 'carga_horaria', 'idprofessor', 'idmateria', 'idcurso', 'descricao', 'data_inicio', 'data_fim', 'data_pagou', 'usuario', 'data_gerada', 'tipo'],
+    tb_pagamentos_parciais: ['ID_pagamento_parcial', 'valor', 'idpagamento', 'idprofessor', 'usuario', 'data_gerada', 'tipo'],
+    tb_produtos: ['ID_produto', 'produto', 'descricao', 'valor_custo', 'valor_venda', 'estoque', 'data_gerada', 'usuario'],
+    tb_vendas: ['ID_venda', 'produto', 'valor_total', 'quantidade', 'observacao', 'nome', 'idcliente', 'usuario', 'data_gerada', 'codigovenda', 'idproduto'],
+    tb_usuarios: ['ID_usuario', 'nome_usuario', 'username', 'senha', 'nivel_usuario'],
+    tb_contas: ['ID_conta', 'cpf', 'senha', 'idaluno'],
+  };
+
   // --- IMPORTAÇÃO DE DUMP SQL ---
-  public async importSql(sqlContent: string): Promise<{ importedCount: number; tablesSummary: Record<string, number> }> {
+  public async importSql(
+    sqlContent: string,
+    replaceExisting: boolean = true
+  ): Promise<{ importedCount: number; tablesSummary: Record<string, number> }> {
     const summary: Record<string, number> = {};
     let totalImported = 0;
+    const clearedTables = new Set<string>();
 
     // Se conectado ao MySQL, executa o script diretamente na instância
     if (this.mysqlConnected && this.mysqlPool) {
       const conn = await this.mysqlPool.getConnection();
       try {
         await conn.beginTransaction();
-        // Divide os comandos por ponto e vírgula
         const statements = sqlContent
           .split(/;\s*$/m)
           .map((s) => s.trim())
@@ -244,75 +275,55 @@ class DatabaseManager {
       }
     }
 
-    // Parser para a engine local de persistência
+    // Se replaceExisting estiver ativo, limpa as tabelas antes de receber a base completa
+    if (replaceExisting) {
+      // Limpeza sob demanda conforme encontrar os INSERTs
+    }
+
+    // Parser robusto com suporte a quebras de linha e parênteses em strings
     const insertRegex = /INSERT\s+INTO\s+`?([a-zA-Z0-9_]+)`?\s*(?:\(([^)]+)\))?\s*VALUES\s*([\s\S]+?);/gi;
     let match;
 
     while ((match = insertRegex.exec(sqlContent)) !== null) {
       let tableName = match[1];
-      // Normalização de case para tb_cursoLivre
       if (tableName.toLowerCase() === 'tb_cursolivre') {
         tableName = 'tb_cursoLivre';
       }
 
       if (!(tableName in this.memDb)) continue;
 
+      // Se for a primeira vez que vemos essa tabela e replaceExisting é verdadeiro, limpa os dados antigos
+      if (replaceExisting && !clearedTables.has(tableName)) {
+        (this.memDb as any)[tableName] = [];
+        clearedTables.add(tableName);
+      }
+
       const colsRaw = match[2];
       const valuesBlock = match[3];
 
       const columns = colsRaw
         ? colsRaw.split(',').map((c) => c.trim().replace(/[`"']/g, ''))
-        : null;
+        : (DatabaseManager.TABLE_COLUMNS[tableName] || null);
 
-      // Extrai cada tupla (...)
-      const tupleRegex = /\(([^)]+)\)/g;
-      let tupleMatch;
+      // Parser robusto de tuplas (...) que respeita aspas
+      const tuples = this.extractSqlTuples(valuesBlock);
 
-      while ((tupleMatch = tupleRegex.exec(valuesBlock)) !== null) {
-        const rawValues = tupleMatch[1];
-        // Parse seguro dos valores separados por vírgula respeitando aspas
-        const parsedValues: any[] = [];
-        let current = '';
-        let inQuote = false;
-        let quoteChar = '';
+      for (const tupleStr of tuples) {
+        const parsedValues = this.parseSqlTupleValues(tupleStr);
+        if (parsedValues.length === 0) continue;
 
-        for (let i = 0; i < rawValues.length; i++) {
-          const char = rawValues[i];
-          if ((char === "'" || char === '"') && (i === 0 || rawValues[i - 1] !== '\\')) {
-            if (!inQuote) {
-              inQuote = true;
-              quoteChar = char;
-            } else if (quoteChar === char) {
-              inQuote = false;
-            } else {
-              current += char;
-            }
-          } else if (char === ',' && !inQuote) {
-            parsedValues.push(this.cleanSqlValue(current));
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        parsedValues.push(this.cleanSqlValue(current));
-
-        // Mapeia colunas para objeto
         const record: any = {};
-        if (columns && columns.length === parsedValues.length) {
-          for (let i = 0; i < columns.length; i++) {
+        if (columns && columns.length >= parsedValues.length) {
+          for (let i = 0; i < parsedValues.length; i++) {
             record[columns[i]] = parsedValues[i];
           }
         } else {
-          // Se não houver colunas explícitas no INSERT, usa as chaves do primeiro registro ou schema
-          const tableList = (this.memDb as any)[tableName];
-          const sample = tableList[0] || {};
-          const keys = Object.keys(sample);
-          for (let i = 0; i < Math.min(keys.length, parsedValues.length); i++) {
-            record[keys[i]] = parsedValues[i];
+          const defaultCols = DatabaseManager.TABLE_COLUMNS[tableName] || [];
+          for (let i = 0; i < Math.min(defaultCols.length, parsedValues.length); i++) {
+            record[defaultCols[i]] = parsedValues[i];
           }
         }
 
-        // Insere ou atualiza pelo ID primário
         const primaryKey = Object.keys(record).find((k) => k.toLowerCase().startsWith('id_') || k.toLowerCase().startsWith('id'));
         const list = (this.memDb as any)[tableName];
 
@@ -334,6 +345,79 @@ class DatabaseManager {
 
     this.persist();
     return { importedCount: totalImported, tablesSummary: summary };
+  }
+
+  // Extrai strings de tuplas respeitando strings com parênteses
+  private extractSqlTuples(valuesBlock: string): string[] {
+    const tuples: string[] = [];
+    let inTuple = false;
+    let inQuote = false;
+    let quoteChar = '';
+    let current = '';
+
+    for (let i = 0; i < valuesBlock.length; i++) {
+      const ch = valuesBlock[i];
+      const prevCh = i > 0 ? valuesBlock[i - 1] : '';
+
+      if ((ch === "'" || ch === '"') && prevCh !== '\\') {
+        if (!inQuote) {
+          inQuote = true;
+          quoteChar = ch;
+        } else if (quoteChar === ch) {
+          inQuote = false;
+        }
+      }
+
+      if (!inQuote) {
+        if (ch === '(' && !inTuple) {
+          inTuple = true;
+          current = '';
+          continue;
+        } else if (ch === ')' && inTuple) {
+          inTuple = false;
+          tuples.push(current);
+          current = '';
+          continue;
+        }
+      }
+
+      if (inTuple) {
+        current += ch;
+      }
+    }
+
+    return tuples;
+  }
+
+  private parseSqlTupleValues(rawValues: string): any[] {
+    const parsedValues: any[] = [];
+    let current = '';
+    let inQuote = false;
+    let quoteChar = '';
+
+    for (let i = 0; i < rawValues.length; i++) {
+      const char = rawValues[i];
+      const prevCh = i > 0 ? rawValues[i - 1] : '';
+
+      if ((char === "'" || char === '"') && prevCh !== '\\') {
+        if (!inQuote) {
+          inQuote = true;
+          quoteChar = char;
+        } else if (quoteChar === char) {
+          inQuote = false;
+        } else {
+          current += char;
+        }
+      } else if (char === ',' && !inQuote) {
+        parsedValues.push(this.cleanSqlValue(current));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+
+    parsedValues.push(this.cleanSqlValue(current));
+    return parsedValues;
   }
 
   private cleanSqlValue(raw: string): any {

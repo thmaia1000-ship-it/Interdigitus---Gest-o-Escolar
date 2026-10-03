@@ -57,12 +57,12 @@ export const api = {
 
   getStatus: () => request<DatabaseStatus>('/status'),
 
-  importSql: (sqlContent: string) =>
+  importSql: (sqlContent: string, replaceExisting: boolean = true) =>
     request<{ success: boolean; message: string; importedCount: number; tablesSummary: Record<string, number> }>(
       '/database/import-sql',
       {
         method: 'POST',
-        body: JSON.stringify({ sqlContent }),
+        body: JSON.stringify({ sqlContent, replaceExisting }),
       }
     ),
 

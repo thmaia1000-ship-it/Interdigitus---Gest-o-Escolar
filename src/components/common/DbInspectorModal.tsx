@@ -27,6 +27,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   // Import SQL state
   const [sqlText, setSqlText] = useState('');
+  const [replaceExisting, setReplaceExisting] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
@@ -69,7 +70,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setImporting(true);
     setImportResult(null);
     try {
-      const res = await api.importSql(sqlText);
+      const res = await api.importSql(sqlText, replaceExisting);
       setImportResult(res);
       loadStatus();
     } catch (err: any) {
@@ -296,6 +297,20 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 ></textarea>
               </div>
 
+              {/* Opção de substituição total */}
+              <div className="flex items-center gap-2 p-3 bg-amber-50/70 border border-amber-200/80 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="chkReplace"
+                  checked={replaceExisting}
+                  onChange={(e) => setReplaceExisting(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <label htmlFor="chkReplace" className="text-xs text-amber-950 font-medium">
+                  <strong>Substituir dados de exemplo pelos dados importados</strong> (limpa os dados fictícios e usa 100% da sua base carregada)
+                </label>
+              </div>
+
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -304,24 +319,36 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 >
                   Limpar texto
                 </button>
-                <button
-                  type="button"
-                  disabled={importing || !sqlText.trim()}
-                  onClick={handleExecuteImport}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
-                >
-                  {importing ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Processando Importação...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="w-3.5 h-3.5" />
-                      <span>Executar Importação SQL</span>
-                    </>
+                <div className="flex items-center gap-2">
+                  {importResult?.success && (
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Atualizar Telas com a Nova Base</span>
+                    </button>
                   )}
-                </button>
+                  <button
+                    type="button"
+                    disabled={importing || !sqlText.trim()}
+                    onClick={handleExecuteImport}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    {importing ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Processando Importação...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>Executar Importação SQL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}

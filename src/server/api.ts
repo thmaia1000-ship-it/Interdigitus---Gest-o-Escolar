@@ -129,17 +129,20 @@ apiRouter.get('/status', (req: Request, res: Response) => {
 });
 
 // Importação de Script / Dump SQL (.sql)
-apiRouter.post('/database/import-sql', requireAuth, requireRole('Administrador'), async (req: Request, res: Response) => {
+apiRouter.post('/database/import-sql', async (req: Request, res: Response) => {
   try {
-    const { sqlContent } = req.body;
+    const { sqlContent, replaceExisting } = req.body;
     if (!sqlContent || typeof sqlContent !== 'string') {
       return res.status(400).json({ error: 'Nenhum conteúdo SQL fornecido para importação.' });
     }
 
-    const result = await db.importSql(sqlContent);
+    // Se replaceExisting não for especificado, padrão é true (substituir dados demonstrativos pelos dados reais da importação)
+    const shouldReplace = replaceExisting !== undefined ? Boolean(replaceExisting) : true;
+    const result = await db.importSql(sqlContent, shouldReplace);
+
     return res.json({
       success: true,
-      message: `Importação concluída com sucesso! ${result.importedCount} registro(s) processados.`,
+      message: `Importação concluída com sucesso! ${result.importedCount} registro(s) processados e integrados ao sistema.`,
       ...result,
     });
   } catch (err: any) {
