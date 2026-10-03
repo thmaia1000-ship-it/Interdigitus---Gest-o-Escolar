@@ -1,6 +1,7 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { db } from './db.js';
-import { AuthUser, UserRole } from '../types/schema.js';
+import express, { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import { db } from './db.ts';
+import type { AuthUser, UserRole } from '../types/schema.ts';
 import crypto from 'crypto';
 
 export const apiRouter = Router();

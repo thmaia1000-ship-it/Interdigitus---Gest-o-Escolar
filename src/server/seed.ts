@@ -1,4 +1,4 @@
-import {
+import type {
   Aluno,
   ResponsavelFinanceiro,
   Curso,
@@ -17,7 +17,7 @@ import {
   Venda,
   Usuario,
   ContaAluno,
-} from '../types/schema.js';
+} from '../types/schema.ts';
 import crypto from 'crypto';
 
 export function hashPassword(plain: string): string {

@@ -4,8 +4,8 @@
  * com aplicação estrita das chaves estrangeiras, regras de integridade e auditoria de caixa.
  */
 
-import { generateSeedData, hashPassword } from './seed.js';
-import {
+import { generateSeedData, hashPassword } from './seed.ts';
+import type {
   Aluno,
   ResponsavelFinanceiro,
   Curso,
@@ -26,7 +26,7 @@ import {
   ContaAluno,
   DatabaseStatus,
   UserRole,
-} from '../types/schema.js';
+} from '../types/schema.ts';
 import fs from 'fs';
 import path from 'path';
 
