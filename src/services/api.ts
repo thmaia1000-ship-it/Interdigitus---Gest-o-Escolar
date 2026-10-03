@@ -57,6 +57,15 @@ export const api = {
 
   getStatus: () => request<DatabaseStatus>('/status'),
 
+  importSql: (sqlContent: string) =>
+    request<{ success: boolean; message: string; importedCount: number; tablesSummary: Record<string, number> }>(
+      '/database/import-sql',
+      {
+        method: 'POST',
+        body: JSON.stringify({ sqlContent }),
+      }
+    ),
+
   getDashboardStats: () => request<any>('/dashboard/stats'),
 
   // Alunos

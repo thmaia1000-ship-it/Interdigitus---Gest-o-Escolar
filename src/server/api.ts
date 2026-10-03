@@ -128,6 +128,25 @@ apiRouter.get('/status', (req: Request, res: Response) => {
   return res.json(status);
 });
 
+// Importação de Script / Dump SQL (.sql)
+apiRouter.post('/database/import-sql', requireAuth, requireRole('Administrador'), async (req: Request, res: Response) => {
+  try {
+    const { sqlContent } = req.body;
+    if (!sqlContent || typeof sqlContent !== 'string') {
+      return res.status(400).json({ error: 'Nenhum conteúdo SQL fornecido para importação.' });
+    }
+
+    const result = await db.importSql(sqlContent);
+    return res.json({
+      success: true,
+      message: `Importação concluída com sucesso! ${result.importedCount} registro(s) processados.`,
+      ...result,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: `Falha na importação do SQL: ${err.message}` });
+  }
+});
+
 // Dashboard Geral
 apiRouter.get('/dashboard/stats', requireAuth, (req: Request, res: Response) => {
   const stats = db.getDashboardStats();

@@ -216,6 +216,137 @@ class DatabaseManager {
     }
   }
 
+  // --- IMPORTAÇÃO DE DUMP SQL ---
+  public async importSql(sqlContent: string): Promise<{ importedCount: number; tablesSummary: Record<string, number> }> {
+    const summary: Record<string, number> = {};
+    let totalImported = 0;
+
+    // Se conectado ao MySQL, executa o script diretamente na instância
+    if (this.mysqlConnected && this.mysqlPool) {
+      const conn = await this.mysqlPool.getConnection();
+      try {
+        await conn.beginTransaction();
+        // Divide os comandos por ponto e vírgula
+        const statements = sqlContent
+          .split(/;\s*$/m)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0 && !s.startsWith('--') && !s.startsWith('/*'));
+        
+        for (const stmt of statements) {
+          await conn.query(stmt);
+        }
+        await conn.commit();
+      } catch (err) {
+        await conn.rollback();
+        throw err;
+      } finally {
+        conn.release();
+      }
+    }
+
+    // Parser para a engine local de persistência
+    const insertRegex = /INSERT\s+INTO\s+`?([a-zA-Z0-9_]+)`?\s*(?:\(([^)]+)\))?\s*VALUES\s*([\s\S]+?);/gi;
+    let match;
+
+    while ((match = insertRegex.exec(sqlContent)) !== null) {
+      let tableName = match[1];
+      // Normalização de case para tb_cursoLivre
+      if (tableName.toLowerCase() === 'tb_cursolivre') {
+        tableName = 'tb_cursoLivre';
+      }
+
+      if (!(tableName in this.memDb)) continue;
+
+      const colsRaw = match[2];
+      const valuesBlock = match[3];
+
+      const columns = colsRaw
+        ? colsRaw.split(',').map((c) => c.trim().replace(/[`"']/g, ''))
+        : null;
+
+      // Extrai cada tupla (...)
+      const tupleRegex = /\(([^)]+)\)/g;
+      let tupleMatch;
+
+      while ((tupleMatch = tupleRegex.exec(valuesBlock)) !== null) {
+        const rawValues = tupleMatch[1];
+        // Parse seguro dos valores separados por vírgula respeitando aspas
+        const parsedValues: any[] = [];
+        let current = '';
+        let inQuote = false;
+        let quoteChar = '';
+
+        for (let i = 0; i < rawValues.length; i++) {
+          const char = rawValues[i];
+          if ((char === "'" || char === '"') && (i === 0 || rawValues[i - 1] !== '\\')) {
+            if (!inQuote) {
+              inQuote = true;
+              quoteChar = char;
+            } else if (quoteChar === char) {
+              inQuote = false;
+            } else {
+              current += char;
+            }
+          } else if (char === ',' && !inQuote) {
+            parsedValues.push(this.cleanSqlValue(current));
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        parsedValues.push(this.cleanSqlValue(current));
+
+        // Mapeia colunas para objeto
+        const record: any = {};
+        if (columns && columns.length === parsedValues.length) {
+          for (let i = 0; i < columns.length; i++) {
+            record[columns[i]] = parsedValues[i];
+          }
+        } else {
+          // Se não houver colunas explícitas no INSERT, usa as chaves do primeiro registro ou schema
+          const tableList = (this.memDb as any)[tableName];
+          const sample = tableList[0] || {};
+          const keys = Object.keys(sample);
+          for (let i = 0; i < Math.min(keys.length, parsedValues.length); i++) {
+            record[keys[i]] = parsedValues[i];
+          }
+        }
+
+        // Insere ou atualiza pelo ID primário
+        const primaryKey = Object.keys(record).find((k) => k.toLowerCase().startsWith('id_') || k.toLowerCase().startsWith('id'));
+        const list = (this.memDb as any)[tableName];
+
+        if (primaryKey && record[primaryKey] !== undefined) {
+          const existingIdx = list.findIndex((item: any) => item[primaryKey] === record[primaryKey]);
+          if (existingIdx !== -1) {
+            list[existingIdx] = { ...list[existingIdx], ...record };
+          } else {
+            list.push(record);
+          }
+        } else {
+          list.push(record);
+        }
+
+        summary[tableName] = (summary[tableName] || 0) + 1;
+        totalImported++;
+      }
+    }
+
+    this.persist();
+    return { importedCount: totalImported, tablesSummary: summary };
+  }
+
+  private cleanSqlValue(raw: string): any {
+    const trimmed = raw.trim();
+    if (trimmed.toUpperCase() === 'NULL') return null;
+    if (/^'.*'$/.test(trimmed) || /^".*"$/.test(trimmed)) {
+      return trimmed.slice(1, -1).replace(/\\'/g, "'").replace(/\\"/g, '"');
+    }
+    const num = Number(trimmed);
+    if (!isNaN(num) && trimmed !== '') return num;
+    return trimmed;
+  }
+
   // --- MÉTODOS DE CONSULTA E OPERAÇÃO (18 TABELAS) ---
 
   // 1. ALUNOS
