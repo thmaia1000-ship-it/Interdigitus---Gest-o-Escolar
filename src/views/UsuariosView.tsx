@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { Usuario } from '../types/schema.js';
-import { KeyRound, Plus, Edit2, Trash2, X, CheckCircle, AlertCircle, Shield, Lock } from 'lucide-react';
+import { KeyRound, Plus, Edit2, Trash2, X, CheckCircle, AlertCircle, Shield, Lock, Search } from 'lucide-react';
 
 export const UsuariosView: React.FC = () => {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -18,10 +19,10 @@ export const UsuariosView: React.FC = () => {
 
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (searchTerm?: string) => {
     setLoading(true);
     try {
-      const data = await api.getUsuarios();
+      const data = await api.getUsuarios(searchTerm !== undefined ? searchTerm : search);
       setUsuarios(data);
     } catch (err: any) {
       setMsg({ type: 'err', text: err.message });
@@ -33,6 +34,11 @@ export const UsuariosView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadData(search);
+  };
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -135,6 +141,38 @@ export const UsuariosView: React.FC = () => {
           <strong>Segurança de Credenciais:</strong> Senhas e hashes criptográficos nunca são expostos em listagens,
           respostas de API ou logs. Apenas redefinições controladas são permitidas aos administradores.
         </span>
+      </div>
+
+      {/* Barra de Busca de Usuários */}
+      <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, username ou perfil..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (e.target.value === '') loadData('');
+            }}
+            className="w-full pl-9 pr-8 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-white"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                loadData('');
+              }}
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </form>
+        <div className="text-xs text-slate-500 font-medium">
+          Total: <strong className="text-slate-900 font-mono">{usuarios.length}</strong> operador(es)
+        </div>
       </div>
 
       {/* Tabela de Usuários */}

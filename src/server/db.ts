@@ -1388,8 +1388,18 @@ class DatabaseManager {
   }
 
   // 17. USUÁRIOS INTERNOS (tb_usuarios)
-  public getUsuarios() {
-    return this.memDb.tb_usuarios.map((u) => ({
+  public getUsuarios(params: { search?: string } = {}) {
+    let list = [...this.memDb.tb_usuarios];
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter(
+        (u) =>
+          u.nome_usuario.toLowerCase().includes(q) ||
+          u.username.toLowerCase().includes(q) ||
+          this.mapNivelToRole(u.nivel_usuario).toLowerCase().includes(q)
+      );
+    }
+    return list.map((u) => ({
       ID_usuario: u.ID_usuario,
       nome_usuario: u.nome_usuario,
       username: u.username,
@@ -1604,6 +1614,106 @@ class DatabaseManager {
         })),
       },
       auditCount: this.memDb.log_caixa.length,
+    };
+  }
+
+  // BUSCA GLOBAL UNIFICADA (Alunos, Usuários, Financeiro)
+  public searchGlobal(query: string) {
+    const rawQ = (query || '').trim().toLowerCase();
+    if (!rawQ) return { alunos: [], usuarios: [], financeiro: [] };
+    const cleanDigits = rawQ.replace(/[^\d]/g, '');
+
+    // 1. Alunos
+    const alunos = this.memDb.tb_alunos
+      .filter((a) => {
+        const cleanCpf = a.cpf ? a.cpf.replace(/[^\d]/g, '') : '';
+        const cleanTel = a.telefone ? a.telefone.replace(/[^\d]/g, '') : '';
+        return (
+          a.nome_aluno.toLowerCase().includes(rawQ) ||
+          (cleanDigits && cleanCpf.includes(cleanDigits)) ||
+          (cleanDigits && cleanTel.includes(cleanDigits)) ||
+          (a.cpf && a.cpf.toLowerCase().includes(rawQ)) ||
+          (a.email && a.email.toLowerCase().includes(rawQ)) ||
+          (a.codigo && a.codigo.toLowerCase().includes(rawQ)) ||
+          (a.sistec && a.sistec.toLowerCase().includes(rawQ))
+        );
+      })
+      .slice(0, 5)
+      .map((a) => {
+        const c = this.memDb.tb_cursos.find((item) => item.ID_curso === a.idcurso);
+        return {
+          id: a.ID_aluno,
+          titulo: a.nome_aluno,
+          subtitulo: `CPF: ${a.cpf || '-'} · Curso: ${c?.nome_curso || 'Geral'} · Status: ${a.status}`,
+          categoria: 'aluno',
+          rota: '/academico/alunos',
+        };
+      });
+
+    // 2. Usuários
+    const usuarios = this.memDb.tb_usuarios
+      .filter((u) => {
+        const role = this.mapNivelToRole(u.nivel_usuario);
+        return (
+          u.nome_usuario.toLowerCase().includes(rawQ) ||
+          u.username.toLowerCase().includes(rawQ) ||
+          role.toLowerCase().includes(rawQ)
+        );
+      })
+      .slice(0, 5)
+      .map((u) => ({
+        id: u.ID_usuario,
+        titulo: u.nome_usuario,
+        subtitulo: `@${u.username} · Perfil: ${this.mapNivelToRole(u.nivel_usuario)} (Nível ${u.nivel_usuario})`,
+        categoria: 'usuario',
+        rota: '/administracao/usuarios',
+      }));
+
+    // 3. Financeiro (Mensalidades e Caixa)
+    const mensalidades = this.memDb.tb_mensalidades
+      .filter((m) => {
+        const al = this.memDb.tb_alunos.find((a) => a.ID_aluno === m.idaluno);
+        const cleanCpf = al?.cpf ? al.cpf.replace(/[^\d]/g, '') : '';
+        return (
+          (al && al.nome_aluno.toLowerCase().includes(rawQ)) ||
+          (cleanDigits && cleanCpf.includes(cleanDigits)) ||
+          m.curso.toLowerCase().includes(rawQ) ||
+          String(m.ID_mensalidade).includes(rawQ)
+        );
+      })
+      .slice(0, 4)
+      .map((m) => {
+        const al = this.memDb.tb_alunos.find((a) => a.ID_aluno === m.idaluno);
+        return {
+          id: m.ID_mensalidade,
+          titulo: `Mensalidade: ${al?.nome_aluno || `Aluno #${m.idaluno}`}`,
+          subtitulo: `Saldo Devedor: R$ ${m.saldo_devedor.toFixed(2)} · Parc. ${m.parcelas_pagas}/${m.n_parcelas} · ${m.curso}`,
+          categoria: 'financeiro',
+          rota: '/financeiro/caixa',
+        };
+      });
+
+    const caixa = this.memDb.tb_caixa
+      .filter((c) => {
+        return (
+          (c.descricao && c.descricao.toLowerCase().includes(rawQ)) ||
+          (c.nome && c.nome.toLowerCase().includes(rawQ)) ||
+          (c.forma && c.forma.toLowerCase().includes(rawQ))
+        );
+      })
+      .slice(0, 4)
+      .map((c) => ({
+        id: c.ID_caixa,
+        titulo: `Caixa [${c.tipo_movimentacao}]: ${c.descricao || c.nome || 'Lançamento'}`,
+        subtitulo: `R$ ${(c.valor_total || 0).toFixed(2)} via ${c.forma} · ${c.data || ''} por @${c.usuario}`,
+        categoria: 'financeiro',
+        rota: '/financeiro/caixa',
+      }));
+
+    return {
+      alunos,
+      usuarios,
+      financeiro: [...mensalidades, ...caixa].slice(0, 6),
     };
   }
 }

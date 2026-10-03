@@ -156,6 +156,13 @@ apiRouter.get('/dashboard/stats', requireAuth, (req: Request, res: Response) => 
   return res.json(stats);
 });
 
+// Busca Global Integrada (Alunos, Usuários, Financeiro)
+apiRouter.get('/search', requireAuth, (req: Request, res: Response) => {
+  const query = (req.query.q as string) || '';
+  const result = db.searchGlobal(query);
+  return res.json(result);
+});
+
 // --- 1. TB_ALUNOS (/academico/alunos) ---
 apiRouter.get('/alunos', requireAuth, requireRole('Secretaria', 'Coordenação', 'Financeiro'), (req, res) => {
   const { search, idcurso, status, page, limit } = req.query;
@@ -654,7 +661,8 @@ apiRouter.post('/vendas', requireAuth, requireRole('Comercial'), (req, res) => {
 
 // --- 17. TB_USUARIOS (/administracao/usuarios) ---
 apiRouter.get('/usuarios', requireAuth, requireRole('Administrador'), (req, res) => {
-  const list = db.getUsuarios();
+  const search = req.query.search as string;
+  const list = db.getUsuarios({ search });
   return res.json(list);
 });
 

@@ -236,6 +236,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
           {(!collapsed && openSection === 'financeiro') && (
             <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
               <button
+                onClick={() => onNavigate('/financeiro/caixa')}
+                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${
+                  isCurrent('/financeiro/caixa')
+                    ? 'text-white font-semibold bg-emerald-600 shadow-xs'
+                    : 'text-emerald-400 font-medium hover:text-emerald-300 hover:bg-slate-800/60'
+                }`}
+              >
+                <span>Caixa (Recebimentos)</span>
+                <span className="text-[9px] px-1 py-0.2 bg-emerald-500/20 text-emerald-300 rounded font-mono">Alunos</span>
+              </button>
+              <button
                 onClick={() => onNavigate('/financeiro/mensalidades')}
                 className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
                   isCurrent('/financeiro/mensalidades')
@@ -243,17 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Mensalidades
-              </button>
-              <button
-                onClick={() => onNavigate('/financeiro/caixa')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
-                  isCurrent('/financeiro/caixa')
-                    ? 'text-white font-semibold bg-slate-800'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                }`}
-              >
-                Livro Caixa
+                Mensalidades & Contratos
               </button>
               <button
                 onClick={() => onNavigate('/financeiro/despesas')}

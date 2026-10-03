@@ -428,7 +428,16 @@ export const api = {
     }),
 
   // Usuários
-  getUsuarios: () => request<any[]>('/usuarios'),
+  getUsuarios: (search?: string) =>
+    request<any[]>(`/usuarios${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  // Busca Global
+  searchGlobal: (q: string) =>
+    request<{
+      alunos: Array<{ id: number; titulo: string; subtitulo: string; categoria: string; rota: string }>;
+      usuarios: Array<{ id: number; titulo: string; subtitulo: string; categoria: string; rota: string }>;
+      financeiro: Array<{ id: number; titulo: string; subtitulo: string; categoria: string; rota: string }>;
+    }>(`/search?q=${encodeURIComponent(q)}`),
 
   createUsuario: (data: any) =>
     request<any>('/usuarios', {

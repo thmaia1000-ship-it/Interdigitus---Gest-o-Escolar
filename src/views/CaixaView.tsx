@@ -14,6 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  Receipt,
+  User,
+  GraduationCap,
+  Filter,
+  Check,
 } from 'lucide-react';
 
 export const CaixaView: React.FC = () => {
@@ -36,7 +41,7 @@ export const CaixaView: React.FC = () => {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
-  // Modal Novo Lançamento
+  // Modal Novo Lançamento Avulso
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     valor_total: 100,
@@ -49,7 +54,37 @@ export const CaixaView: React.FC = () => {
     justificativa: '',
   });
 
+  // Modal Receber Mensalidade do Aluno & Pesquisa Avançada
+  const [isReceberOpen, setIsReceberOpen] = useState(false);
+  const [mensalidades, setMensalidades] = useState<any[]>([]);
+  const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
+  const [alunoSearchTerm, setAlunoSearchTerm] = useState('');
+  const [filtroApenasComSaldo, setFiltroApenasComSaldo] = useState(true);
+  const [recebimentoData, setRecebimentoData] = useState({
+    valor_pago: 0,
+    forma_pagamento: 'PIX',
+    gerar_caixa: true,
+    observacao: '',
+  });
+
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  // Lista filtrada na Pesquisa Avançada por Nome
+  const filteredMensalidadesModal = mensalidades.filter((m) => {
+    if (filtroApenasComSaldo && (m.saldo_devedor || 0) <= 0) return false;
+    if (!alunoSearchTerm.trim()) return true;
+
+    const term = alunoSearchTerm.toLowerCase().trim();
+    const cleanDigits = alunoSearchTerm.replace(/[^\d]/g, '');
+    const cleanCpf = (m.cpf_aluno || '').replace(/[^\d]/g, '');
+
+    return (
+      (m.nome_aluno && m.nome_aluno.toLowerCase().includes(term)) ||
+      (cleanDigits && cleanCpf.includes(cleanDigits)) ||
+      (m.curso && m.curso.toLowerCase().includes(term)) ||
+      String(m.ID_mensalidade).includes(term)
+    );
+  });
 
   const loadData = async () => {
     setLoading(true);
@@ -88,6 +123,63 @@ export const CaixaView: React.FC = () => {
     e.preventDefault();
     setPage(1);
     loadData();
+  };
+
+  const handleOpenReceberMensalidade = async () => {
+    setMsg(null);
+    setAlunoSearchTerm('');
+    setFiltroApenasComSaldo(true);
+    try {
+      const data = await api.getMensalidades();
+      setMensalidades(data);
+      if (data.length > 0) {
+        const primeiroComSaldo = data.find((m: any) => m.saldo_devedor > 0) || data[0];
+        setSelectedPlano(primeiroComSaldo);
+        setRecebimentoData({
+          valor_pago: Math.min(primeiroComSaldo.valor_parcela || 0, primeiroComSaldo.saldo_devedor || 0),
+          forma_pagamento: 'PIX',
+          gerar_caixa: true,
+          observacao: `Recebimento Mensalidade Aluno: ${primeiroComSaldo.nome_aluno}`,
+        });
+      }
+      setIsReceberOpen(true);
+    } catch (err: any) {
+      setMsg({ type: 'err', text: err.message });
+    }
+  };
+
+  const handleSelectPlano = (id: number) => {
+    const plano = mensalidades.find((m: any) => m.ID_mensalidade === id);
+    if (!plano) return;
+    setSelectedPlano(plano);
+    setRecebimentoData((prev) => ({
+      ...prev,
+      valor_pago: Math.min(plano.valor_parcela || 0, plano.saldo_devedor || 0),
+      observacao: `Recebimento Mensalidade - ${plano.nome_aluno} (${plano.curso})`,
+    }));
+  };
+
+  const handleConfirmarRecebimento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlano) return;
+    try {
+      await api.registrarPagamentoMensalidade({
+        idmensalidade: selectedPlano.ID_mensalidade,
+        valor_pago: Number(recebimentoData.valor_pago),
+        forma_pagamento: recebimentoData.forma_pagamento,
+        gerar_caixa: recebimentoData.gerar_caixa,
+        observacao: recebimentoData.observacao,
+      });
+      setMsg({
+        type: 'ok',
+        text: `Recebimento de ${formatMoney(Number(recebimentoData.valor_pago))} do aluno(a) ${selectedPlano.nome_aluno} registrado com sucesso no Caixa e quitado na mensalidade!`,
+      });
+      setIsReceberOpen(false);
+      loadData();
+      setTimeout(() => setMsg(null), 4000);
+    } catch (err: any) {
+      setMsg({ type: 'err', text: err.message });
+    }
   };
 
   const handleOpenCreate = () => {
@@ -134,21 +226,28 @@ export const CaixaView: React.FC = () => {
             Movimentações financeiras de entrada e saída do fluxo diário
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href="/api/export/csv/caixa"
             download
             className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Exportar CSV Seguro</span>
+            <span>Exportar CSV</span>
           </a>
           <button
             onClick={handleOpenCreate}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+            className="px-3 py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
           >
-            <Plus className="w-4 h-4" />
-            <span>Novo Lançamento</span>
+            <Plus className="w-4 h-4 text-slate-600" />
+            <span>Lançamento Avulso</span>
+          </button>
+          <button
+            onClick={handleOpenReceberMensalidade}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Receber Mensalidade do Aluno</span>
           </button>
         </div>
       </div>
@@ -490,6 +589,307 @@ export const CaixaView: React.FC = () => {
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold"
                 >
                   Registrar Movimentação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal Recebimento de Mensalidade do Aluno com Pesquisa Avançada */}
+      {isReceberOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Header do Modal */}
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Caixa: Receber Mensalidade do Aluno</h2>
+                  <p className="text-xs text-slate-500">Pesquisa avançada de alunos e baixa no livro caixa</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReceberOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmarRecebimento} className="p-6 space-y-4 text-xs overflow-y-auto custom-scrollbar flex-1">
+              {/* Seção 1: Pesquisa Avançada por Nome */}
+              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <Search className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Pesquisa Avançada por Nome do Aluno</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroApenasComSaldo(!filtroApenasComSaldo)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors flex items-center gap-1 ${
+                      filtroApenasComSaldo
+                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                        : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <span>{filtroApenasComSaldo ? 'Apenas com Saldo Aberto' : 'Todos os Contratos'}</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do aluno, CPF ou curso..."
+                    value={alunoSearchTerm}
+                    onChange={(e) => setAlunoSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {alunoSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setAlunoSearchTerm('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista de Alunos Encontrados */}
+                <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 pt-1">
+                  {filteredMensalidadesModal.length === 0 ? (
+                    <div className="p-3 text-center text-slate-400 bg-white rounded-lg border border-dashed border-slate-200">
+                      Nenhum aluno encontrado para o filtro digitado.
+                    </div>
+                  ) : (
+                    filteredMensalidadesModal.map((m) => {
+                      const isSelected = selectedPlano?.ID_mensalidade === m.ID_mensalidade;
+                      return (
+                        <div
+                          key={m.ID_mensalidade}
+                          onClick={() => handleSelectPlano(m.ID_mensalidade)}
+                          className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-900 truncate flex items-center gap-1.5">
+                                <span>{m.nome_aluno}</span>
+                                <span className="text-[10px] font-mono text-slate-400 font-normal">
+                                  CPF: {m.cpf_aluno || '-'}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 truncate">
+                                {m.curso} · Parc. {m.parcelas_pagas || 0}/{m.n_parcelas} · R${' '}
+                                {(m.valor_parcela || 0).toFixed(2)}/mês
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] text-slate-400 block">Saldo Devedor</span>
+                            <span
+                              className={`font-mono font-bold text-xs ${
+                                (m.saldo_devedor || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
+                              }`}
+                            >
+                              {formatMoney(m.saldo_devedor)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Seção 2: Contrato Selecionado & Painel de Quitação */}
+              {selectedPlano ? (
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                        Aluno Selecionado para Baixa
+                      </span>
+                      <div className="text-sm font-bold text-emerald-950">{selectedPlano.nome_aluno}</div>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900 font-semibold">
+                      Contrato #{selectedPlano.ID_mensalidade}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 p-2 bg-white/80 rounded-lg border border-emerald-100 text-xs">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Saldo Devedor Total</span>
+                      <strong className="text-rose-700 font-mono text-sm">
+                        {formatMoney(selectedPlano.saldo_devedor)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Parcelas Pagas</span>
+                      <strong className="text-slate-800 font-mono text-sm">
+                        {selectedPlano.parcelas_pagas || 0} de {selectedPlano.n_parcelas}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Valor da Parcela</span>
+                      <strong className="text-emerald-700 font-mono text-sm">
+                        {formatMoney(selectedPlano.valor_parcela)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Atalhos Rápidos de Pagamento */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-semibold text-slate-500 block">Atalhos de Pagamento:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecebimentoData({
+                            ...recebimentoData,
+                            valor_pago: Math.min(
+                              selectedPlano.valor_parcela || 0,
+                              selectedPlano.saldo_devedor || 0
+                            ),
+                          })
+                        }
+                        className="px-2.5 py-1 bg-white hover:bg-emerald-100/60 border border-emerald-200 rounded text-[11px] font-semibold text-emerald-800 transition-colors"
+                      >
+                        1 Parcela ({formatMoney(selectedPlano.valor_parcela)})
+                      </button>
+                      {selectedPlano.saldo_devedor >= selectedPlano.valor_parcela * 2 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRecebimentoData({
+                              ...recebimentoData,
+                              valor_pago: selectedPlano.valor_parcela * 2,
+                            })
+                          }
+                          className="px-2.5 py-1 bg-white hover:bg-emerald-100/60 border border-emerald-200 rounded text-[11px] font-semibold text-emerald-800 transition-colors"
+                        >
+                          2 Parcelas ({formatMoney(selectedPlano.valor_parcela * 2)})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecebimentoData({
+                            ...recebimentoData,
+                            valor_pago: selectedPlano.saldo_devedor || 0,
+                          })
+                        }
+                        className="px-2.5 py-1 bg-white hover:bg-rose-50 border border-rose-200 rounded text-[11px] font-semibold text-rose-700 transition-colors"
+                      >
+                        Quitar Saldo Total ({formatMoney(selectedPlano.saldo_devedor)})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                  Utilize o campo de pesquisa acima para selecionar o aluno que efetuará o pagamento.
+                </div>
+              )}
+
+              {/* Seção 3: Valores e Forma de Pagamento */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Valor a Receber (R$) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min={0.01}
+                    max={selectedPlano?.saldo_devedor || 99999}
+                    value={recebimentoData.valor_pago || ''}
+                    onChange={(e) =>
+                      setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono font-bold text-sm text-emerald-900 focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                  {selectedPlano && (
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Saldo restante após pagamento: {formatMoney(Math.max(0, selectedPlano.saldo_devedor - (recebimentoData.valor_pago || 0)))}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Forma de Pagamento *</label>
+                  <select
+                    required
+                    value={recebimentoData.forma_pagamento}
+                    onChange={(e) =>
+                      setRecebimentoData({ ...recebimentoData, forma_pagamento: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800"
+                  >
+                    <option value="PIX">PIX (Chave Institucional)</option>
+                    <option value="Dinheiro">Dinheiro (Em espécie no balcão)</option>
+                    <option value="Cartão Débito">Cartão de Débito</option>
+                    <option value="Cartão Crédito">Cartão de Crédito</option>
+                    <option value="Boleto">Boleto Bancário</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Descrição / Recibo da Operação</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Recebimento parcela mensalidade aluno..."
+                  value={recebimentoData.observacao}
+                  onChange={(e) => setRecebimentoData({ ...recebimentoData, observacao: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900">Entrada Automática no Livro Caixa</div>
+                  <div className="text-[11px] text-slate-500">
+                    Gera movimentação em tb_caixa e registro cronológico em log_caixa
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={recebimentoData.gerar_caixa}
+                  onChange={(e) => setRecebimentoData({ ...recebimentoData, gerar_caixa: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Botões do Rodapé */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsReceberOpen(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!selectedPlano || recebimentoData.valor_pago <= 0}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>Confirmar Recebimento de {formatMoney(recebimentoData.valor_pago || 0)}</span>
                 </button>
               </div>
             </form>

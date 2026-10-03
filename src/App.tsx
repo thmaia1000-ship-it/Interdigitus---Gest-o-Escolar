@@ -163,7 +163,7 @@ function MainApp() {
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <Sidebar currentPath={currentPath} onNavigate={setCurrentPath} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header currentPath={currentPath} />
+        <Header currentPath={currentPath} onNavigate={setCurrentPath} />
         <main className="flex-1 overflow-y-auto">{renderContent()}</main>
       </div>
     </div>
