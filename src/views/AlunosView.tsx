@@ -308,14 +308,15 @@ export const AlunosView: React.FC = () => {
             className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-600"
           >
             <option value="">Todos os Status</option>
-            <option value="Ativo">Ativo</option>
-            <option value="Concluído">Concluído</option>
-            <option value="Trancado">Trancado</option>
-            <option value="Evadido">Evadido</option>
+            <option value="ATIVO">Ativos</option>
+            <option value="FINALIZADO">Finalizados</option>
+            <option value="DESATIVADO">Desativados</option>
+            <option value="TRANCADO">Trancados</option>
+            <option value="CANCELADO">Cancelados</option>
           </select>
 
           <span className="text-xs text-slate-500 font-mono ml-auto">
-            {total} aluno(s)
+            {total.toLocaleString('pt-BR')} aluno(s)
           </span>
         </div>
       </div>
@@ -371,11 +372,13 @@ export const AlunosView: React.FC = () => {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                          a.status === 'Ativo'
+                          /ATIVO/i.test(a.status || '')
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : a.status === 'Concluído'
+                            : /FINALIZADO|CONCLU/i.test(a.status || '')
                             ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-slate-100 text-slate-600'
+                            : /TRANCADO/i.test(a.status || '')
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
                         {a.status}

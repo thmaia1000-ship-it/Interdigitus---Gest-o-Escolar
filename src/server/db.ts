@@ -487,7 +487,20 @@ class DatabaseManager {
       list = list.filter((a) => a.idcurso === Number(params.idcurso));
     }
     if (params.status) {
-      list = list.filter((a) => a.status === params.status);
+      const qStatus = params.status.trim().toUpperCase();
+      list = list.filter((a) => {
+        const aStatus = (a.status || '').trim().toUpperCase();
+        if (qStatus === 'ATIVO') return aStatus === 'ATIVO';
+        if (qStatus === 'CONCLUÍDO' || qStatus === 'CONCLUIDO' || qStatus === 'FINALIZADO') {
+          return aStatus === 'FINALIZADO' || aStatus.includes('CONCLU');
+        }
+        if (qStatus === 'INATIVO' || qStatus === 'DESATIVADO') {
+          return aStatus === 'DESATIVADO' || aStatus === 'INATIVO';
+        }
+        if (qStatus === 'TRANCADO') return aStatus === 'TRANCADO';
+        if (qStatus === 'CANCELADO' || qStatus === 'EVADIDO') return aStatus === 'CANCELADO' || aStatus === 'EVADIDO';
+        return aStatus === qStatus;
+      });
     }
 
     const total = list.length;
@@ -971,13 +984,21 @@ class DatabaseManager {
     let list = [...this.memDb.tb_caixa];
 
     if (params.tipo) {
-      list = list.filter((c) => c.tipo_movimentacao === params.tipo);
+      const qTipo = params.tipo.trim().toUpperCase();
+      list = list.filter((c) => {
+        const cTipo = (c.tipo_movimentacao || '').trim().toUpperCase();
+        if (qTipo.startsWith('ENTR')) return cTipo.startsWith('ENTR');
+        if (qTipo.startsWith('SAI')) return cTipo.startsWith('SAI');
+        return cTipo === qTipo;
+      });
     }
     if (params.forma) {
-      list = list.filter((c) => c.forma === params.forma);
+      const qForma = params.forma.trim().toUpperCase();
+      list = list.filter((c) => (c.forma || '').trim().toUpperCase() === qForma);
     }
     if (params.usuario) {
-      list = list.filter((c) => c.usuario === params.usuario);
+      const qUser = params.usuario.trim().toLowerCase();
+      list = list.filter((c) => (c.usuario || '').trim().toLowerCase() === qUser);
     }
     if (params.data_inicio) {
       list = list.filter((c) => c.data && c.data >= params.data_inicio!);
@@ -991,7 +1012,8 @@ class DatabaseManager {
         (c) =>
           (c.descricao && c.descricao.toLowerCase().includes(q)) ||
           (c.nome && c.nome.toLowerCase().includes(q)) ||
-          (c.curso && c.curso.toLowerCase().includes(q))
+          (c.curso && c.curso.toLowerCase().includes(q)) ||
+          (c.forma && c.forma.toLowerCase().includes(q))
       );
     }
 
@@ -999,11 +1021,11 @@ class DatabaseManager {
     list.sort((a, b) => (b.data || '').localeCompare(a.data || '') || b.ID_caixa - a.ID_caixa);
 
     const totalEntradas = list
-      .filter((c) => c.tipo_movimentacao === 'Entrada')
-      .reduce((sum, c) => sum + (c.valor_total || 0), 0);
+      .filter((c) => /ENTRADA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const totalSaidas = list
-      .filter((c) => c.tipo_movimentacao === 'Saída')
-      .reduce((sum, c) => sum + (c.valor_total || 0), 0);
+      .filter((c) => /SAIDA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const saldo = totalEntradas - totalSaidas;
 
     const total = list.length;
@@ -1595,8 +1617,8 @@ class DatabaseManager {
   // DASHBOARD AGGREGATES (sem números fixos inventados)
   public getDashboardStats() {
     const totalAlunos = this.memDb.tb_alunos.length;
-    const alunosAtivos = this.memDb.tb_alunos.filter((a) => a.status === 'Ativo').length;
-    const alunosConcluidos = this.memDb.tb_alunos.filter((a) => a.status === 'Concluído').length;
+    const alunosAtivos = this.memDb.tb_alunos.filter((a) => /ATIVO/i.test(a.status || '')).length;
+    const alunosConcluidos = this.memDb.tb_alunos.filter((a) => /FINALIZADO|CONCLU/i.test(a.status || '')).length;
 
     // Alunos por curso
     const alunosPorCurso: Record<string, number> = {};
@@ -1606,22 +1628,22 @@ class DatabaseManager {
       alunosPorCurso[nome] = (alunosPorCurso[nome] || 0) + 1;
     }
 
-    // Caixa no período atual
+    // Caixa no período atual (case-insensitive para suportar ENTRADA/Entrada e SAIDA/Saída)
     const entradasCaixa = this.memDb.tb_caixa
-      .filter((c) => c.tipo_movimentacao === 'Entrada')
-      .reduce((sum, c) => sum + (c.valor_total || 0), 0);
+      .filter((c) => /ENTRADA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const saidasCaixa = this.memDb.tb_caixa
-      .filter((c) => c.tipo_movimentacao === 'Saída')
-      .reduce((sum, c) => sum + (c.valor_total || 0), 0);
+      .filter((c) => /SAIDA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const saldoCaixa = entradasCaixa - saidasCaixa;
 
     // Saldos pendentes do legado
-    const totalSaldosMensalidades = this.memDb.tb_mensalidades.reduce((sum, m) => sum + m.saldo_devedor, 0);
-    const totalPendenciasProfessores = this.memDb.tb_pagamentos.reduce((sum, p) => sum + p.valor_pendente, 0);
+    const totalSaldosMensalidades = this.memDb.tb_mensalidades.reduce((sum, m) => sum + (Number(m.saldo_devedor) || 0), 0);
+    const totalPendenciasProfessores = this.memDb.tb_pagamentos.reduce((sum, p) => sum + (Number(p.valor_pendente) || 0), 0);
 
     // Vendas
-    const totalVendasValor = this.memDb.tb_vendas.reduce((sum, v) => sum + (v.valor_total || 0), 0);
-    const totalItensVendidos = this.memDb.tb_vendas.reduce((sum, v) => sum + (v.quantidade || 0), 0);
+    const totalVendasValor = this.memDb.tb_vendas.reduce((sum, v) => sum + (Number(v.valor_total) || 0), 0);
+    const totalItensVendidos = this.memDb.tb_vendas.reduce((sum, v) => sum + (Number(v.quantidade) || 0), 0);
     const codigosVendaUnicos = new Set(this.memDb.tb_vendas.map((v) => v.codigovenda)).size;
 
     // Alertas de estoque baixo (estoque <= 10)

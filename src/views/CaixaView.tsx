@@ -401,7 +401,7 @@ export const CaixaView: React.FC = () => {
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
-                        c.tipo_movimentacao === 'Entrada'
+                        /ENTRADA/i.test(c.tipo_movimentacao || '')
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}
@@ -422,10 +422,10 @@ export const CaixaView: React.FC = () => {
                   <td className="px-4 py-3 text-right">
                     <span
                       className={`font-mono font-bold text-sm ${
-                        c.tipo_movimentacao === 'Entrada' ? 'text-emerald-700' : 'text-rose-700'
+                        /ENTRADA/i.test(c.tipo_movimentacao || '') ? 'text-emerald-700' : 'text-rose-700'
                       }`}
                     >
-                      {c.tipo_movimentacao === 'Saída' ? '-' : '+'} {formatMoney(c.valor_total || 0)}
+                      {/SAIDA/i.test(c.tipo_movimentacao || '') ? '-' : '+'} {formatMoney(c.valor_total || 0)}
                     </span>
                   </td>
                 </tr>

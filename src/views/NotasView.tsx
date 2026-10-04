@@ -272,9 +272,9 @@ export const NotasView: React.FC = () => {
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                        n.situacao === 'Aprovado'
+                        /APROV/i.test(n.situacao || '')
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : n.situacao === 'Exame'
+                          : /EXAME/i.test(n.situacao || '')
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}
