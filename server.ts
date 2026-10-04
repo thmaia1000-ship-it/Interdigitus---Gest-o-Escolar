@@ -23,9 +23,14 @@ async function startServer() {
   // Rotas de API
   app.use('/api', apiRouter);
 
-  // Rota de Health Check
-  app.get('/health', (req, res) => {
+  // Rota de Health Check (para Cloud Run, Docker e monitoramento)
+  app.get(['/health', '/_healthz', '/healthz'], (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // 404 para rotas de API não encontradas
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: 'Endpoint da API não encontrado.' });
   });
 
   if (!isProduction) {
