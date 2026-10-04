@@ -36,6 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     checkAuth();
+
+    const handleAuthExpired = () => {
+      localStorage.removeItem('interdigitus_token');
+      setUser(null);
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
   }, []);
 
   const loginInternal = async (username: string, pass: string) => {

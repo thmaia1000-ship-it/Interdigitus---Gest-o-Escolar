@@ -28,6 +28,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido na requisição' }));
+    if (res.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/portal-login')) {
+      localStorage.removeItem('interdigitus_token');
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+    }
     throw new Error(errorData.error || `Erro ${res.status}: ${res.statusText}`);
   }
 
