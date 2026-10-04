@@ -1717,6 +1717,42 @@ class DatabaseManager {
       .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const saldoCaixa = entradasCaixa - saidasCaixa;
 
+    // Data de referência temporal para cálculo de Dia, Semana e Mês
+    const allCaixaDates = this.memDb.tb_caixa
+      .map((c) => c.data)
+      .filter((d): d is string => Boolean(d))
+      .sort();
+    const latestCaixaDate: string = (allCaixaDates.length > 0 && allCaixaDates[allCaixaDates.length - 1]) ? allCaixaDates[allCaixaDates.length - 1] : '2026-10-03';
+    const nowBrazil: string = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    const refDate: string = this.memDb.tb_caixa.some((c) => c.data === nowBrazil) ? nowBrazil : latestCaixaDate;
+
+    // 1. Entradas do Dia
+    const diaFilter = this.memDb.tb_caixa.filter(
+      (c) => /ENTRADA/i.test(c.tipo_movimentacao || '') && c.data === refDate
+    );
+    const entradasDia = diaFilter.reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
+    const qtdEntradasDia = diaFilter.length;
+
+    // 2. Entradas da Semana (últimos 7 dias a partir da data de referência)
+    const refDateObj = new Date(refDate + 'T12:00:00Z');
+    const past7DaysObj = new Date(refDateObj);
+    past7DaysObj.setDate(past7DaysObj.getDate() - 6);
+    const past7DaysStr = past7DaysObj.toISOString().split('T')[0];
+
+    const semanaFilter = this.memDb.tb_caixa.filter(
+      (c) => /ENTRADA/i.test(c.tipo_movimentacao || '') && c.data && c.data >= past7DaysStr && c.data <= refDate
+    );
+    const entradasSemana = semanaFilter.reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
+    const qtdEntradasSemana = semanaFilter.length;
+
+    // 3. Entradas do Mês (mês da data de referência, ex: '2026-10')
+    const refMonthStr = refDate.slice(0, 7);
+    const mesFilter = this.memDb.tb_caixa.filter(
+      (c) => /ENTRADA/i.test(c.tipo_movimentacao || '') && c.data && c.data.startsWith(refMonthStr)
+    );
+    const entradasMes = mesFilter.reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
+    const qtdEntradasMes = mesFilter.length;
+
     // Saldos pendentes do legado
     const totalSaldosMensalidades = this.memDb.tb_mensalidades.reduce((sum, m) => sum + (Number(m.saldo_devedor) || 0), 0);
     const totalPendenciasProfessores = this.memDb.tb_pagamentos.reduce((sum, p) => sum + (Number(p.valor_pendente) || 0), 0);
@@ -1725,9 +1761,6 @@ class DatabaseManager {
     const totalVendasValor = this.memDb.tb_vendas.reduce((sum, v) => sum + (Number(v.valor_total) || 0), 0);
     const totalItensVendidos = this.memDb.tb_vendas.reduce((sum, v) => sum + (Number(v.quantidade) || 0), 0);
     const codigosVendaUnicos = new Set(this.memDb.tb_vendas.map((v) => v.codigovenda)).size;
-
-    // Alertas de estoque baixo (estoque <= 10)
-    const produtosEstoqueBaixo = this.memDb.tb_produtos.filter((p) => (p.estoque ?? 0) <= 10);
 
     return {
       alunos: {
@@ -1740,6 +1773,13 @@ class DatabaseManager {
         entradasCaixa,
         saidasCaixa,
         saldoCaixa,
+        entradasDia,
+        qtdEntradasDia,
+        entradasSemana,
+        qtdEntradasSemana,
+        entradasMes,
+        qtdEntradasMes,
+        dataReferencia: refDate,
         totalSaldosMensalidades,
         totalPendenciasProfessores,
       },
@@ -1747,11 +1787,6 @@ class DatabaseManager {
         totalVendasValor,
         totalItensVendidos,
         pedidosDistintos: codigosVendaUnicos,
-        produtosEstoqueBaixo: produtosEstoqueBaixo.map((p) => ({
-          id: p.ID_produto,
-          produto: p.produto,
-          estoque: p.estoque,
-        })),
       },
       auditCount: this.memDb.log_caixa.length,
     };
