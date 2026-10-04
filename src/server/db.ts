@@ -1036,6 +1036,120 @@ class DatabaseManager {
     return { total, page, limit, totalPages: Math.ceil(total / limit), totalEntradas, totalSaidas, saldo, data };
   }
 
+  // FECHAMENTO DIÁRIO DE CAIXA DO OPERADOR (Versão para impressão e conferência)
+  public getFechamentoCaixa(params: {
+    data?: string;
+    usuario?: string;
+    fundo_troco?: number;
+  }) {
+    const allDates = this.memDb.tb_caixa
+      .map((c) => c.data)
+      .filter((d): d is string => Boolean(d))
+      .sort();
+    const latestDate = allDates.length > 0 ? allDates[allDates.length - 1] : '2026-10-03';
+    const targetDate = params.data || latestDate;
+    const fundoTroco = Number(params.fundo_troco) || 0;
+
+    // Obter lista de operadores distintos presentes no banco
+    const operadoresDisponiveis = [
+      ...new Set(this.memDb.tb_caixa.map((c) => (c.usuario || '').trim().toUpperCase()).filter(Boolean)),
+    ].sort();
+
+    // Filtrar movimentações pelo dia e operador
+    let movimentos = this.memDb.tb_caixa.filter((c) => c.data === targetDate);
+    if (params.usuario && params.usuario.trim() && params.usuario !== 'TODOS') {
+      const qUser = params.usuario.trim().toUpperCase();
+      movimentos = movimentos.filter((c) => (c.usuario || '').trim().toUpperCase() === qUser);
+    }
+
+    // Ordenar por horário e id
+    movimentos.sort((a, b) => (a.horario || '').localeCompare(b.horario || '') || a.ID_caixa - b.ID_caixa);
+
+    // Totais gerais
+    const totalEntradas = movimentos
+      .filter((c) => /ENTRADA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
+    const qtdEntradas = movimentos.filter((c) => /ENTRADA/i.test(c.tipo_movimentacao || '')).length;
+
+    const totalSaidas = movimentos
+      .filter((c) => /SAIDA/i.test(c.tipo_movimentacao || ''))
+      .reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
+    const qtdSaidas = movimentos.filter((c) => /SAIDA/i.test(c.tipo_movimentacao || '')).length;
+
+    const saldoMovimentacoes = totalEntradas - totalSaidas;
+    const saldoFinalComFundo = fundoTroco + saldoMovimentacoes;
+
+    // Agrupamento por Forma de Pagamento
+    const formasMap = new Map<
+      string,
+      { forma: string; entradas: number; saidas: number; saldo: number; qtdEntradas: number; qtdSaidas: number }
+    >();
+
+    for (const m of movimentos) {
+      const fNome = (m.forma || 'OUTROS').trim().toUpperCase();
+      if (!formasMap.has(fNome)) {
+        formasMap.set(fNome, { forma: fNome, entradas: 0, saidas: 0, saldo: 0, qtdEntradas: 0, qtdSaidas: 0 });
+      }
+      const entry = formasMap.get(fNome)!;
+      const valor = Number(m.valor_total) || 0;
+      if (/ENTRADA/i.test(m.tipo_movimentacao || '')) {
+        entry.entradas += valor;
+        entry.qtdEntradas++;
+        entry.saldo += valor;
+      } else {
+        entry.saidas += valor;
+        entry.qtdSaidas++;
+        entry.saldo -= valor;
+      }
+    }
+    const porForma = Array.from(formasMap.values());
+
+    // Agrupamento por Descrição / Categoria de receita
+    const descMap = new Map<string, { descricao: string; valor: number; qtd: number }>();
+    for (const m of movimentos) {
+      const desc = (m.descricao || 'Diversos').trim();
+      if (!descMap.has(desc)) {
+        descMap.set(desc, { descricao: desc, valor: 0, qtd: 0 });
+      }
+      const item = descMap.get(desc)!;
+      item.valor += Number(m.valor_total) || 0;
+      item.qtd++;
+    }
+    const porCategoria = Array.from(descMap.values()).sort((a, b) => b.valor - a.valor);
+
+    // Dinheiro em espécie apurado para entrega física à tesouraria
+    const dinheiroRow = porForma.find((f) => f.forma === 'DINHEIRO');
+    const entradasDinheiro = dinheiroRow ? dinheiroRow.entradas : 0;
+    const saidasDinheiro = dinheiroRow ? dinheiroRow.saidas : 0;
+    const dinheiroGavetaFisica = fundoTroco + entradasDinheiro - saidasDinheiro;
+
+    const opNome = params.usuario && params.usuario !== 'TODOS' ? params.usuario.trim().toUpperCase() : 'TODOS OS OPERADORES';
+    const cleanDate = targetDate.replace(/-/g, '');
+    const numeroFechamento = `FC-${cleanDate}-${opNome.replace(/\s+/g, '')}`;
+
+    return {
+      dataMovimento: targetDate,
+      operador: opNome,
+      fundoTroco,
+      totalEntradas,
+      qtdEntradas,
+      totalSaidas,
+      qtdSaidas,
+      saldoMovimentacoes,
+      saldoFinalComFundo,
+      entradasDinheiro,
+      saidasDinheiro,
+      dinheiroGavetaFisica,
+      porForma,
+      porCategoria,
+      totalRegistros: movimentos.length,
+      movimentos,
+      numeroFechamento,
+      dataHoraEmissao: new Date().toISOString(),
+      operadoresDisponiveis,
+    };
+  }
+
   public createMovimentacaoCaixa(
     payload: Omit<Caixa, 'ID_caixa'> & { justificativa?: string },
     operatorUser: string
@@ -1753,6 +1867,27 @@ class DatabaseManager {
     const entradasMes = mesFilter.reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0);
     const qtdEntradasMes = mesFilter.length;
 
+    // 4. A Receber no Mês Vigente (Mensalidades ativas com vigência/vencimento no mês corrente)
+    const startOfMonth = `${refMonthStr}-01`;
+    const endOfMonth = `${refMonthStr}-31`;
+    const mensalidadesVigentesMes = this.memDb.tb_mensalidades.filter((m) => {
+      const saldo = Number(m.saldo_devedor) || 0;
+      if (saldo <= 0) return false;
+      const dataInicio = m.data_inicio || '';
+      const dataFim = m.data_fim || '';
+      const dataPagar = m.data_pagar || '';
+      const noMesPorVigencia = dataInicio <= endOfMonth && dataFim >= startOfMonth;
+      const noMesPorVencimento = dataPagar.startsWith(refMonthStr);
+      return noMesPorVigencia || noMesPorVencimento;
+    });
+
+    const totalPrevistoMesVigente = mensalidadesVigentesMes.reduce(
+      (sum, m) => sum + (Number(m.valor_parcela) || 0),
+      0
+    );
+    const qtdContratosAReceberMes = mensalidadesVigentesMes.length;
+    const restanteAReceberMes = Math.max(0, totalPrevistoMesVigente - entradasMes);
+
     // Saldos pendentes do legado
     const totalSaldosMensalidades = this.memDb.tb_mensalidades.reduce((sum, m) => sum + (Number(m.saldo_devedor) || 0), 0);
     const totalPendenciasProfessores = this.memDb.tb_pagamentos.reduce((sum, p) => sum + (Number(p.valor_pendente) || 0), 0);
@@ -1780,6 +1915,10 @@ class DatabaseManager {
         entradasMes,
         qtdEntradasMes,
         dataReferencia: refDate,
+        mesReferencia: refMonthStr,
+        totalPrevistoMesVigente,
+        restanteAReceberMes,
+        qtdContratosAReceberMes,
         totalSaldosMensalidades,
         totalPendenciasProfessores,
       },

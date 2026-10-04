@@ -19,12 +19,17 @@ import {
   GraduationCap,
   Filter,
   Check,
+  Printer,
 } from 'lucide-react';
+import { FechamentoCaixaModal } from '../components/FechamentoCaixaModal.js';
 
 export const CaixaView: React.FC = () => {
   const [movimentos, setMovimentos] = useState<Caixa[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal Fechamento de Caixa do Operador
+  const [isFechamentoOpen, setIsFechamentoOpen] = useState(false);
 
   // Totais
   const [totalEntradas, setTotalEntradas] = useState(0);
@@ -241,6 +246,14 @@ export const CaixaView: React.FC = () => {
           >
             <Plus className="w-4 h-4 text-slate-600" />
             <span>Lançamento Avulso</span>
+          </button>
+          <button
+            onClick={() => setIsFechamentoOpen(true)}
+            className="px-3.5 py-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            title="Gerar e imprimir relatório de fechamento do operador"
+          >
+            <Printer className="w-4 h-4 text-indigo-600" />
+            <span>Fechamento do Caixa</span>
           </button>
           <button
             onClick={handleOpenReceberMensalidade}
@@ -896,6 +909,13 @@ export const CaixaView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Modal Fechamento Diário de Caixa do Operador (Comprovante Oficial de Impressão) */}
+      <FechamentoCaixaModal
+        isOpen={isFechamentoOpen}
+        onClose={() => setIsFechamentoOpen(false)}
+        initialDate={dataInicio || '2026-10-03'}
+        initialOperator="ERICA"
+      />
     </div>
   );
 };

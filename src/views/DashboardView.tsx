@@ -2,19 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api.js';
 import {
   Users,
-  GraduationCap,
-  Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
-  Receipt,
-  Clock,
   Calendar,
   CalendarDays,
   CalendarRange,
-  ShoppingBag,
+  Clock,
   ArrowRight,
   CircleDollarSign,
   TrendingUp,
+  Receipt,
+  CheckCircle2,
+  CalendarClock,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
@@ -54,6 +52,25 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
     return isoDate;
   };
 
+  const getMesNome = (mesAno?: string) => {
+    if (!mesAno) return 'Mês Vigente';
+    const [ano, mes] = mesAno.split('-');
+    const meses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const idx = parseInt(mes, 10) - 1;
+    if (idx >= 0 && idx < 12) {
+      return `${meses[idx]} de ${ano}`;
+    }
+    return mesAno;
+  };
+
+  const totalPrevisto = stats?.financeiro?.totalPrevistoMesVigente || 0;
+  const entradasMes = stats?.financeiro?.entradasMes || 0;
+  const restanteMes = stats?.financeiro?.restanteAReceberMes || 0;
+  const percentArrecadado = totalPrevisto > 0 ? Math.min(100, Math.round((entradasMes / totalPrevisto) * 100)) : 0;
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header & Ações */}
@@ -75,13 +92,13 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
             onClick={() => onNavigate('/financeiro/caixa')}
             className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
           >
-            <Wallet className="w-3.5 h-3.5 text-slate-600" />
+            <Receipt className="w-3.5 h-3.5 text-slate-600" />
             <span>Ver Livro Caixa</span>
           </button>
         </div>
       </div>
 
-      {/* BLOCO PRINCIPAL: ENTRADAS DO CAIXA (DIA, SEMANA, MÊS) */}
+      {/* BLOCO 1: ENTRADAS DO CAIXA (DIA, SEMANA, MÊS) */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -114,7 +131,7 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
               {formatMoney(stats?.financeiro?.entradasDia)}
             </div>
             <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
-              <span className="text-slate-500 font-medium">Recebido na data</span>
+              <span className="text-slate-500 font-medium">Recebido hoje</span>
               <button
                 onClick={() => onNavigate('/financeiro/caixa')}
                 className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
@@ -140,7 +157,7 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
               {formatMoney(stats?.financeiro?.entradasSemana)}
             </div>
             <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
-              <span className="text-slate-500 font-medium">Acumulado dos últimos 7 dias</span>
+              <span className="text-slate-500 font-medium">Últimos 7 dias corridos</span>
               <button
                 onClick={() => onNavigate('/financeiro/caixa')}
                 className="text-blue-700 hover:text-blue-800 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
@@ -166,7 +183,7 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
               {formatMoney(stats?.financeiro?.entradasMes)}
             </div>
             <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
-              <span className="text-slate-500 font-medium">Total recebido no mês</span>
+              <span className="text-slate-500 font-medium">Arrecadado neste mês</span>
               <button
                 onClick={() => onNavigate('/financeiro/caixa')}
                 className="text-indigo-700 hover:text-indigo-800 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
@@ -178,79 +195,89 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
         </div>
       </div>
 
-      {/* Grid Secundário: Indicadores Gerais Consolidados */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total de Alunos */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Alunos Cadastrados</span>
-            <Users className="w-4 h-4 text-indigo-600" />
+      {/* BLOCO 2: VISÃO DE A RECEBER NO MÊS VIGENTE & INDICADORES GERAIS */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-amber-600" />
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+              Previsão de Recebimento · {getMesNome(stats?.financeiro?.mesReferencia)}
+            </h2>
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">{stats?.alunos?.total || 0}</div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
-            <span className="text-emerald-700 font-semibold">{stats?.alunos?.ativos || 0} Ativos</span>
-            <span aria-hidden="true">·</span>
-            <span>{stats?.alunos?.concluidos || 0} Concluídos</span>
-          </div>
+          <button
+            onClick={() => onNavigate('/financeiro/mensalidades')}
+            className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+          >
+            <span>Ver Todas as Mensalidades</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Saldo Líquido Total Acumulado em Caixa */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Saldo Líquido em Caixa</span>
-            <Wallet className="w-4 h-4 text-emerald-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Previsto a Receber no Mês */}
+          <div className="bg-white p-4 rounded-xl border border-amber-200/90 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span className="font-semibold text-slate-800">Total Previsto no Mês</span>
+              <CalendarClock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="text-2xl font-bold text-amber-900 mt-2">
+              {formatMoney(totalPrevisto)}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
+              <span className="font-semibold text-amber-800">{stats?.financeiro?.qtdContratosAReceberMes || 0}</span>
+              <span>contratos ativos no mês</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">
-            {formatMoney(stats?.financeiro?.saldoCaixa)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
-            <span className="text-emerald-600 flex items-center font-medium">
-              <ArrowUpRight className="w-3 h-3" />
-              {formatMoney(stats?.financeiro?.entradasCaixa)}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span className="text-rose-600 flex items-center font-medium">
-              <ArrowDownRight className="w-3 h-3" />
-              {formatMoney(stats?.financeiro?.saidasCaixa)}
-            </span>
-          </div>
-        </div>
 
-        {/* Saldos devedores de Mensalidades */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Saldos de Mensalidades</span>
-            <Receipt className="w-4 h-4 text-blue-600" />
+          {/* Card 2: Restante Pendente a Receber no Mês */}
+          <div className="bg-white p-4 rounded-xl border border-rose-200/90 shadow-xs relative overflow-hidden group hover:border-rose-300 transition-all">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span className="font-semibold text-slate-800">A Receber no Mês Vigente</span>
+              <Clock className="w-4 h-4 text-rose-600" />
+            </div>
+            <div className="text-2xl font-bold text-rose-700 mt-2">
+              {formatMoney(restanteMes)}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
+              <span className="text-emerald-700 font-semibold">{formatMoney(entradasMes)}</span>
+              <span>já recebidos</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">
-            {formatMoney(stats?.financeiro?.totalSaldosMensalidades)}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-2 truncate">
-            Soma dos campos <code className="font-mono">saldo_devedor</code> do legado
-          </div>
-        </div>
 
-        {/* Vendas & Pedidos Realizados */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Vendas Realizadas</span>
-            <ShoppingBag className="w-4 h-4 text-amber-600" />
+          {/* Card 3: Alunos Cadastrados */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span className="font-semibold text-slate-800">Alunos Cadastrados</span>
+              <Users className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{stats?.alunos?.total || 0}</div>
+            <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
+              <span className="text-emerald-700 font-semibold">{stats?.alunos?.ativos || 0} Ativos</span>
+              <span aria-hidden="true">·</span>
+              <span>{stats?.alunos?.concluidos || 0} Concluídos</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">
-            {formatMoney(stats?.comercial?.totalVendasValor)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
-            <span>{stats?.comercial?.pedidosDistintos || 0} pedidos</span>
-            <span aria-hidden="true">·</span>
-            <span>{stats?.comercial?.totalItensVendidos || 0} itens</span>
+
+          {/* Card 4: Compromissos Docentes */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span className="font-semibold text-slate-800">Pendências Docentes</span>
+              <Receipt className="w-4 h-4 text-purple-600" />
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">
+              {formatMoney(stats?.financeiro?.totalPendenciasProfessores)}
+            </div>
+            <div className="text-xs text-slate-500 mt-2">
+              <span>Compromissos docentes em aberto</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Linha Inferior: Distribuição por Cursos e Gestão Financeira */}
+      {/* BLOCO 3: DISTRIBUIÇÃO ACADÊMICA & DETALHAMENTO DE ARRECADAÇÃO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Distribuição por Cursos */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200">
+        <div className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Distribuição de Alunos por Curso</h2>
@@ -285,96 +312,71 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
           </div>
         </div>
 
-        {/* Resumo Financeiro & Compromissos Docentes */}
+        {/* Visão de Arrecadação do Mês Vigente */}
         <div className="space-y-4">
-          {/* Card Comparativo de Entradas */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5 mb-1">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span>Comparativo de Entradas</span>
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">Evolução dos recebimentos no caixa</p>
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                <span>Progresso do Mês</span>
+              </h2>
+              <span className="text-xs font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-0.5 rounded">
+                {percentArrecadado}% recebido
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Comparativo entre o previsto e arrecadado em {getMesNome(stats?.financeiro?.mesReferencia)}
+            </p>
 
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Dia (Hoje)</span>
-                  <span className="font-bold text-emerald-700 font-mono">
-                    {formatMoney(stats?.financeiro?.entradasDia)}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.round(((stats?.financeiro?.entradasDia || 0) / (stats?.financeiro?.entradasSemana || 1)) * 100)
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
+            {/* Barra de Progresso Arrecadado vs Pendente */}
+            <div className="space-y-2">
+              <div className="w-full h-3 bg-rose-100 rounded-full overflow-hidden flex">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-500"
+                  style={{ width: `${percentArrecadado}%` }}
+                ></div>
               </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Semana (7 dias)</span>
-                  <span className="font-bold text-blue-700 font-mono">
-                    {formatMoney(stats?.financeiro?.entradasSemana)}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.round(((stats?.financeiro?.entradasSemana || 0) / (stats?.financeiro?.entradasMes || 1)) * 100)
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Mês Vigente</span>
-                  <span className="font-bold text-indigo-700 font-mono">
-                    {formatMoney(stats?.financeiro?.entradasMes)}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: '100%' }}></div>
-                </div>
+              <div className="flex justify-between text-[11px] text-slate-600 font-medium pt-1">
+                <span className="flex items-center gap-1 text-emerald-700">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Recebido: {formatMoney(entradasMes)}
+                </span>
+                <span className="flex items-center gap-1 text-rose-700">
+                  <span className="w-2 h-2 rounded-full bg-rose-400"></span>
+                  A Receber: {formatMoney(restanteMes)}
+                </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100">
+            <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Previsão bruta do mês:</span>
+                <span className="font-semibold text-slate-800 font-mono">{formatMoney(totalPrevisto)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Contratos com parcela no mês:</span>
+                <span className="font-semibold text-slate-800 font-mono">{stats?.financeiro?.qtdContratosAReceberMes || 0} alunos</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Saldos devedores acumulados:</span>
+                <span className="font-semibold text-slate-700 font-mono">{formatMoney(stats?.financeiro?.totalSaldosMensalidades)}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <button
+                onClick={() => onNavigate('/financeiro/mensalidades')}
+                className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors border border-indigo-200/60 flex items-center justify-center gap-1.5"
+              >
+                <CalendarClock className="w-3.5 h-3.5" />
+                <span>Gerenciar Mensalidades & Contratos</span>
+              </button>
               <button
                 onClick={() => onNavigate('/financeiro/caixa')}
-                className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
               >
-                <Wallet className="w-3.5 h-3.5" />
-                <span>Abrir Livro Caixa Completo</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Card Pendências Docentes */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900 mb-1">Pendências Docentes</h2>
-            <p className="text-xs text-slate-500 mb-3">
-              Total acumulado em aberto de compromissos com professores
-            </p>
-            <div className="text-xl font-bold text-slate-900">
-              {formatMoney(stats?.financeiro?.totalPendenciasProfessores)}
-            </div>
-            <div className="mt-3">
-              <button
-                onClick={() => onNavigate('/financeiro/pagamentos-professores')}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-              >
-                Ver Compromissos Docentes &rarr;
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Conferir Livro Caixa</span>
               </button>
             </div>
           </div>

@@ -303,6 +303,18 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  getFechamentoCaixa: (params: {
+    data?: string;
+    usuario?: string;
+    fundo_troco?: number;
+  } = {}) => {
+    const q = new URLSearchParams();
+    if (params.data) q.append('data', params.data);
+    if (params.usuario) q.append('usuario', params.usuario);
+    if (params.fundo_troco !== undefined) q.append('fundo_troco', String(params.fundo_troco));
+    return request<any>(`/caixa/fechamento?${q.toString()}`);
+  },
+
   // Auditoria Caixa (log_caixa)
   getAuditoriaCaixa: (params: {
     data_inicio?: string;

@@ -527,6 +527,20 @@ apiRouter.get('/caixa', requireAuth, requireRole('Financeiro'), (req, res) => {
   return res.json(result);
 });
 
+// Fechamento de Caixa Diário do Operador (Relatório para conferência e impressão)
+apiRouter.get('/caixa/fechamento', requireAuth, requireRole('Financeiro'), (req, res) => {
+  try {
+    const result = db.getFechamentoCaixa({
+      data: req.query.data as string,
+      usuario: req.query.usuario as string,
+      fundo_troco: req.query.fundo_troco ? Number(req.query.fundo_troco) : 0,
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/caixa', requireAuth, requireRole('Financeiro'), (req, res) => {
   try {
     const operator = (req as any).user.username;
