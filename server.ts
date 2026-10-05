@@ -50,7 +50,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, () => {
     console.log(`[Interdigitus] Servidor operacional na porta ${PORT} (Modo: ${isProduction ? 'Produção' : 'Desenvolvimento'})`);
   });
 }
