@@ -13,6 +13,7 @@ import {
   UploadCloud,
   FileCode2,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 
 interface Props {
@@ -66,17 +67,26 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const handleExecuteImport = async () => {
-    if (!sqlText.trim()) return;
+    const trimmed = sqlText.trim();
+    if (!trimmed) return;
     setImporting(true);
     setImportResult(null);
     try {
-      const res = await api.importSql(sqlText, replaceExisting);
+      let res;
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        // Formato JSON direto
+        const parsed = JSON.parse(trimmed);
+        res = await api.importJson(parsed, replaceExisting);
+      } else {
+        // Formato SQL
+        res = await api.importSql(trimmed, replaceExisting);
+      }
       setImportResult(res);
       loadStatus();
     } catch (err: any) {
       setImportResult({
         success: false,
-        message: err.message || 'Falha ao processar script SQL.',
+        message: err.message || 'Falha ao processar script de importação.',
       });
     } finally {
       setImporting(false);
@@ -146,7 +156,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            Importar Dump .SQL
+            Importar Dump .SQL / .JSON
           </button>
           <button
             onClick={() => setActiveTab('schema')}
@@ -263,27 +273,38 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <div className="flex items-center justify-between gap-4 p-3 border border-slate-200 rounded-lg bg-slate-50">
                 <div className="flex items-center gap-2 text-xs text-slate-700">
                   <FileCode2 className="w-4 h-4 text-slate-500" />
-                  <span>Carregar arquivo do seu computador (.sql):</span>
+                  <span>Carregar arquivo do seu computador (.sql ou .json):</span>
                 </div>
-                <label className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-md text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors">
-                  <span>Selecionar Arquivo .sql</span>
-                  <input
-                    type="file"
-                    accept=".sql,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="/api/database/export-json"
+                    download="data_interdigitus.json"
+                    className="px-3 py-1.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 rounded-md text-xs font-semibold text-slate-700 shadow-xs transition-colors flex items-center gap-1.5"
+                    title="Exportar base de dados completa em JSON"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Baixar Base Atual (.JSON)</span>
+                  </a>
+                  <label className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-md text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors">
+                    <span>Selecionar Arquivo (.sql / .json)</span>
+                    <input
+                      type="file"
+                      accept=".sql,.json,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* Textarea */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Ou cole os comandos SQL INSERT abaixo:
+                  Ou cole o conteúdo SQL (INSERT INTO...) ou JSON abaixo:
                 </label>
                 <textarea
                   rows={8}
-                  placeholder={`INSERT INTO \`tb_cursos\` (\`ID_curso\`, \`nome_curso\`) VALUES (1, 'Técnico em Enfermagem');\nINSERT INTO \`tb_alunos\` (...) VALUES (...);`}
+                  placeholder={`Cole aqui o script SQL gerado pelo mysqldump (ex: INSERT INTO \`tb_alunos\` ...) ou o arquivo JSON da base completa...`}
                   value={sqlText}
                   onChange={(e) => setSqlText(e.target.value)}
                   className="w-full p-3 font-mono text-xs border border-slate-300 rounded-lg bg-slate-900 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600"
@@ -300,7 +321,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   className="w-4 h-4 text-indigo-600 rounded"
                 />
                 <label htmlFor="chkReplace" className="text-xs text-amber-950 font-medium">
-                  <strong>Substituir dados de exemplo pelos dados importados</strong> (limpa os dados fictícios e usa 100% da sua base carregada)
+                  <strong>Substituir dados de exemplo pelos dados importados</strong> (grava e persiste 100% da sua base importada na plataforma)
                 </label>
               </div>
 
@@ -337,7 +358,7 @@ export const DbInspectorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     ) : (
                       <>
                         <UploadCloud className="w-3.5 h-3.5" />
-                        <span>Executar Importação SQL</span>
+                        <span>Executar Importação para a Plataforma</span>
                       </>
                     )}
                   </button>

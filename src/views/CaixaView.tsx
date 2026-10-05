@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { api } from '../services/api.js';
 import { Caixa, Aluno } from '../types/schema.js';
 import {
@@ -106,6 +106,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   const [mensalidades, setMensalidades] = useState<any[]>([]);
   const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
   const [alunoSearchTerm, setAlunoSearchTerm] = useState('');
+  const deferredAlunoSearch = useDeferredValue(alunoSearchTerm);
   const [modalStatusTab, setModalStatusTab] = useState<'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS'>('TODAS');
   const [recebimentoData, setRecebimentoData] = useState({
     valor_pago: 0,
@@ -132,36 +133,33 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
     })
     .slice(0, 10);
 
-  // Lista de Alunos filtrados letra por letra no Receber Mensalidade abrangendo todos os nomes da tabela alunos
-  const filteredMensalidadesModal = mensalidades.filter((m) => {
-    if (modalStatusTab === 'VENCIDAS' && m.status_parcela !== 'VENCIDA') return false;
-    if (modalStatusTab === 'AVENCER' && m.status_parcela !== 'AVENCER') return false;
-    if (modalStatusTab === 'PAGAS' && m.status_parcela !== 'PAGA') return false;
+  // Lista de Alunos filtrados ultra-rápida no Receber Mensalidade com useMemo
+  const filteredMensalidadesModal = useMemo(() => {
+    const term = normalizeSearch(deferredAlunoSearch);
+    const cleanDigits = deferredAlunoSearch.replace(/[^\d]/g, '');
 
-    if (!alunoSearchTerm.trim()) return true;
+    return mensalidades.filter((m) => {
+      if (modalStatusTab === 'VENCIDAS' && m.status_parcela !== 'VENCIDA') return false;
+      if (modalStatusTab === 'AVENCER' && m.status_parcela !== 'AVENCER') return false;
+      if (modalStatusTab === 'PAGAS' && m.status_parcela !== 'PAGA') return false;
 
-    const term = normalizeSearch(alunoSearchTerm);
-    const cleanDigits = alunoSearchTerm.replace(/[^\d]/g, '');
-    const cleanCpf = (m.cpf_aluno || '').replace(/[^\d]/g, '');
-    const nomeAlunoNorm = normalizeSearch(m.nome_aluno || '');
-    const cursoNorm = normalizeSearch(m.curso || '');
-    const statusNorm = normalizeSearch(m.status_parcela || '');
-    const statusLabelNorm = normalizeSearch(m.status_label || '');
+      if (!term) return true;
 
-    return (
-      nomeAlunoNorm.includes(term) ||
-      (cleanDigits.length >= 2 && cleanCpf.includes(cleanDigits)) ||
-      cursoNorm.includes(term) ||
-      statusNorm.includes(term) ||
-      statusLabelNorm.includes(term) ||
-      String(m.ID_mensalidade).includes(term) ||
-      String(m.idaluno).includes(term)
-    );
-  });
+      return (
+        (m._normNome && m._normNome.includes(term)) ||
+        (cleanDigits.length >= 2 && m._cleanCpf && m._cleanCpf.includes(cleanDigits)) ||
+        (m._normCurso && m._normCurso.includes(term)) ||
+        (m._normStatus && m._normStatus.includes(term)) ||
+        (m._normLabel && m._normLabel.includes(term)) ||
+        (m._cleanMensId && m._cleanMensId.includes(term)) ||
+        (m._cleanId && m._cleanId.includes(term))
+      );
+    });
+  }, [mensalidades, deferredAlunoSearch, modalStatusTab]);
 
-  // Ao digitar cada letra no nome do aluno, pré-selecionar o primeiro aluno encontrado
+  // Ao alterar resultados filtrados, selecionar o primeiro apenas se o atual sumiu
   useEffect(() => {
-    if (alunoSearchTerm.trim() && filteredMensalidadesModal.length > 0) {
+    if (filteredMensalidadesModal.length > 0) {
       const isAlreadyInList = filteredMensalidadesModal.some(
         (m) =>
           (m.ID_mensalidade && m.ID_mensalidade === selectedPlano?.ID_mensalidade) ||
@@ -172,7 +170,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
         handleSelectPlano(first.ID_mensalidade || first.idaluno);
       }
     }
-  }, [alunoSearchTerm, modalStatusTab]);
+  }, [filteredMensalidadesModal]);
 
   const loadData = async () => {
     setLoading(true);
@@ -228,12 +226,22 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
     setModalStatusTab('TODAS');
     try {
       const data = await api.getPesquisaAlunosMensalidades();
-      setMensalidades(data);
-      if (data.length > 0) {
+      const indexed = data.map((item: any) => ({
+        ...item,
+        _normNome: normalizeSearch(item.nome_aluno || ''),
+        _cleanCpf: (item.cpf_aluno || '').replace(/[^\d]/g, ''),
+        _normCurso: normalizeSearch(item.curso || ''),
+        _normStatus: normalizeSearch(item.status_parcela || ''),
+        _normLabel: normalizeSearch(item.status_label || ''),
+        _cleanId: String(item.idaluno || ''),
+        _cleanMensId: item.ID_mensalidade ? String(item.ID_mensalidade) : '',
+      }));
+      setMensalidades(indexed);
+      if (indexed.length > 0) {
         const primeiroComSaldo =
-          data.find((m: any) => m.status_parcela === 'VENCIDA') ||
-          data.find((m: any) => m.status_parcela === 'AVENCER') ||
-          data[0];
+          indexed.find((m: any) => m.status_parcela === 'VENCIDA') ||
+          indexed.find((m: any) => m.status_parcela === 'AVENCER') ||
+          indexed[0];
         if (primeiroComSaldo) {
           handleSelectPlano(primeiroComSaldo.ID_mensalidade || primeiroComSaldo.idaluno);
         }

@@ -195,12 +195,40 @@ apiRouter.post('/database/import-sql', async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      message: `Importação concluída com sucesso! ${result.importedCount} registro(s) processados e integrados ao sistema.`,
+      message: `Importação SQL concluída com sucesso! ${result.importedCount} registro(s) processados e integrados ao sistema.`,
       ...result,
     });
   } catch (err: any) {
     return res.status(500).json({ error: `Falha na importação do SQL: ${err.message}` });
   }
+});
+
+// Importação Direta de Base JSON (.json)
+apiRouter.post('/database/import-json', async (req: Request, res: Response) => {
+  try {
+    const { jsonData, replaceExisting } = req.body;
+    if (!jsonData || typeof jsonData !== 'object') {
+      return res.status(400).json({ error: 'Nenhum objeto JSON fornecido para importação.' });
+    }
+
+    const shouldReplace = replaceExisting !== undefined ? Boolean(replaceExisting) : true;
+    const result = db.importJson(jsonData, shouldReplace);
+
+    return res.json({
+      success: true,
+      message: `Base JSON importada e persistida com sucesso! ${result.importedCount} registro(s) integrados na plataforma.`,
+      ...result,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: `Falha na importação do JSON: ${err.message}` });
+  }
+});
+
+// Exportação / Download da Base Atual
+apiRouter.get('/database/export-json', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename="data_interdigitus.json"');
+  return res.json(db.getRawDb());
 });
 
 // Dashboard Geral

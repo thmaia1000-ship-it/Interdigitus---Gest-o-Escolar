@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import {
@@ -30,9 +30,9 @@ import {
 const normalizeSearch = (str: string = '') =>
   str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-// Realce visual das letras digitadas pelo operador
-const highlightMatch = (text: string = '', query: string = '') => {
-  if (!query.trim() || !text) return <>{text}</>;
+// Realce visual ultra-rápido das letras correspondentes
+const HighlightText: React.FC<{ text: string; query: string }> = React.memo(({ text, query }) => {
+  if (!query || !query.trim() || !text) return <>{text}</>;
   const qNorm = normalizeSearch(query);
   const textNorm = normalizeSearch(text);
   const idx = textNorm.indexOf(qNorm);
@@ -49,7 +49,7 @@ const highlightMatch = (text: string = '', query: string = '') => {
       {end}
     </>
   );
-};
+});
 
 const formatMoney = (val: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -57,6 +57,44 @@ const formatMoney = (val: number) => {
     currency: 'BRL',
   }).format(val || 0);
 };
+
+// Componente isolado de relógio: NÃO causa re-render no componente pai
+const LiveClock: React.FC = React.memo(() => {
+  const [time, setTime] = useState('');
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setTime(
+        now.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+      setDate(
+        now.toLocaleDateString('pt-BR', {
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
+      );
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono">
+      <Clock className="w-3.5 h-3.5 text-emerald-400" />
+      <span className="text-slate-400 capitalize">{date}</span>
+      <span className="text-white font-bold tracking-wider">{time}</span>
+    </div>
+  );
+});
 
 interface ReceberMensalidadeViewProps {
   onClose?: () => void;
@@ -71,8 +109,9 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   const [loading, setLoading] = useState(true);
   const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
 
-  // Filtros de busca letra por letra e status
+  // Filtros de busca ultra-rápidos com prioridade não-bloqueante
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearch = useDeferredValue(searchTerm);
   const [statusTab, setStatusTab] = useState<'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS' | 'SEM_CONTRATO'>('TODAS');
 
   // Formulário de Quitação
@@ -83,7 +122,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     observacao: '',
   });
 
-  // Formulário de Gerar Contrato Rápido (caso o aluno não tenha mensalidade ainda)
+  // Formulário de Gerar Contrato Rápido
   const [novoContratoData, setNovoContratoData] = useState({
     n_parcelas: 10,
     valor_parcela: 150,
@@ -92,9 +131,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   });
   const [gerandoContrato, setGerandoContrato] = useState(false);
 
-  // Relógio e Tela Cheia
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
+  // Tela Cheia
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Status e Comprovante
@@ -102,48 +139,34 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [ultimoComprovante, setUltimoComprovante] = useState<any | null>(null);
 
-  // Atualização do relógio ao vivo
-  useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
-      setCurrentDate(
-        now.toLocaleDateString('pt-BR', {
-          weekday: 'short',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        })
-      );
-    };
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // Foco automático no input de busca ao carregar
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
 
-  // Carregar lista completa de alunos e mensalidades
+  // Carregar lista completa com pré-indexação para busca instantânea
   const loadData = async () => {
     setLoading(true);
     try {
       const data = await api.getPesquisaAlunosMensalidades();
-      setItens(data);
-      if (data.length > 0 && !selectedPlano) {
-        // Selecionar prioritariamente o primeiro aluno com mensalidade vencida ou a vencer
+      // Pré-indexar termos em minúsculo e sem acento uma única vez
+      const indexed = data.map((item: any) => ({
+        ...item,
+        _normNome: normalizeSearch(item.nome_aluno || ''),
+        _cleanCpf: (item.cpf_aluno || '').replace(/[^\d]/g, ''),
+        _normCurso: normalizeSearch(item.curso || ''),
+        _normStatus: normalizeSearch(item.status_parcela || ''),
+        _normLabel: normalizeSearch(item.status_label || ''),
+        _cleanId: String(item.idaluno || ''),
+        _cleanMensId: item.ID_mensalidade ? String(item.ID_mensalidade) : '',
+      }));
+
+      setItens(indexed);
+      if (indexed.length > 0 && !selectedPlano) {
         const prioritario =
-          data.find((m: any) => m.status_parcela === 'VENCIDA') ||
-          data.find((m: any) => m.status_parcela === 'AVENCER') ||
-          data[0];
+          indexed.find((m: any) => m.status_parcela === 'VENCIDA') ||
+          indexed.find((m: any) => m.status_parcela === 'AVENCER') ||
+          indexed[0];
         if (prioritario) {
           selectPlano(prioritario);
         }
@@ -177,58 +200,68 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     }
   };
 
-  // Contadores para as abas
-  const counts = {
-    todas: itens.length,
-    vencidas: itens.filter((i) => i.status_parcela === 'VENCIDA').length,
-    avencer: itens.filter((i) => i.status_parcela === 'AVENCER').length,
-    pagas: itens.filter((i) => i.status_parcela === 'PAGA').length,
-    semContrato: itens.filter((i) => i.status_parcela === 'SEM_CONTRATO').length,
-  };
+  // Contadores pré-calculados em 1 único loop com useMemo
+  const counts = useMemo(() => {
+    let vencidas = 0;
+    let avencer = 0;
+    let pagas = 0;
+    let semContrato = 0;
+    for (let i = 0; i < itens.length; i++) {
+      const st = itens[i].status_parcela;
+      if (st === 'VENCIDA') vencidas++;
+      else if (st === 'AVENCER') avencer++;
+      else if (st === 'PAGA') pagas++;
+      else if (st === 'SEM_CONTRATO') semContrato++;
+    }
+    return {
+      todas: itens.length,
+      vencidas,
+      avencer,
+      pagas,
+      semContrato,
+    };
+  }, [itens]);
 
-  // Filtragem em tempo real letra por letra no client
-  const filteredItens = itens.filter((item) => {
-    // Filtro da aba
-    if (statusTab === 'VENCIDAS' && item.status_parcela !== 'VENCIDA') return false;
-    if (statusTab === 'AVENCER' && item.status_parcela !== 'AVENCER') return false;
-    if (statusTab === 'PAGAS' && item.status_parcela !== 'PAGA') return false;
-    if (statusTab === 'SEM_CONTRATO' && item.status_parcela !== 'SEM_CONTRATO') return false;
+  // Filtragem ultra-rápida usando deferredSearch e campos pré-indexados
+  const filteredItens = useMemo(() => {
+    const term = normalizeSearch(deferredSearch);
+    const cleanDigits = deferredSearch.replace(/[^\d]/g, '');
 
-    // Filtro de texto
-    if (!searchTerm.trim()) return true;
+    return itens.filter((item) => {
+      // Filtro de aba
+      if (statusTab === 'VENCIDAS' && item.status_parcela !== 'VENCIDA') return false;
+      if (statusTab === 'AVENCER' && item.status_parcela !== 'AVENCER') return false;
+      if (statusTab === 'PAGAS' && item.status_parcela !== 'PAGA') return false;
+      if (statusTab === 'SEM_CONTRATO' && item.status_parcela !== 'SEM_CONTRATO') return false;
 
-    const term = normalizeSearch(searchTerm);
-    const cleanDigits = searchTerm.replace(/[^\d]/g, '');
-    const cleanCpf = (item.cpf_aluno || '').replace(/[^\d]/g, '');
-    const nomeAlunoNorm = normalizeSearch(item.nome_aluno || '');
-    const cursoNorm = normalizeSearch(item.curso || '');
-    const statusNorm = normalizeSearch(item.status_parcela || '');
-    const statusLabelNorm = normalizeSearch(item.status_label || '');
+      // Filtro de texto
+      if (!term) return true;
 
-    return (
-      nomeAlunoNorm.includes(term) ||
-      (cleanDigits.length >= 2 && cleanCpf.includes(cleanDigits)) ||
-      cursoNorm.includes(term) ||
-      statusNorm.includes(term) ||
-      statusLabelNorm.includes(term) ||
-      String(item.idaluno).includes(term) ||
-      (item.ID_mensalidade && String(item.ID_mensalidade).includes(term))
-    );
-  });
+      return (
+        item._normNome.includes(term) ||
+        (cleanDigits.length >= 2 && item._cleanCpf.includes(cleanDigits)) ||
+        item._normCurso.includes(term) ||
+        item._normStatus.includes(term) ||
+        item._normLabel.includes(term) ||
+        item._cleanId.includes(term) ||
+        (item._cleanMensId && item._cleanMensId.includes(term))
+      );
+    });
+  }, [itens, deferredSearch, statusTab]);
 
-  // Ao digitar letras ou mudar aba, seleciona automaticamente o primeiro resultado caso o atual não esteja nos resultados
+  // Sincronizar seleção apenas quando a lista filtrada não contém o aluno atualmente selecionado
   useEffect(() => {
     if (filteredItens.length > 0) {
-      const stillSelected = filteredItens.some(
+      const isStillInList = filteredItens.some(
         (m) =>
           (m.ID_mensalidade && m.ID_mensalidade === selectedPlano?.ID_mensalidade) ||
           (!m.ID_mensalidade && m.idaluno === selectedPlano?.idaluno)
       );
-      if (!stillSelected) {
+      if (!isStillInList) {
         selectPlano(filteredItens[0]);
       }
     }
-  }, [searchTerm, statusTab]);
+  }, [filteredItens]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -283,7 +316,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
         text: `Recebimento de ${formatMoney(valorNum)} do aluno(a) ${selectedPlano.nome_aluno} quitado com sucesso!`,
       });
 
-      // Recarregar lista completa
+      // Recarregar dados
       await loadData();
       searchInputRef.current?.focus();
     } catch (err: any) {
@@ -293,7 +326,6 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     }
   };
 
-  // Gerar contrato de mensalidade para aluno sem contrato
   const handleGerarContratoRapido = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlano || selectedPlano.tem_contrato) return;
@@ -351,20 +383,16 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Terminal Exclusivo Ativo
+                Terminal Otimizado de Alta Performance
               </span>
               <span>·</span>
-              <span className="hidden sm:inline">Busca ampliada em toda a base de alunos</span>
+              <span className="hidden sm:inline">Busca instantânea sem travamentos</span>
             </div>
           </div>
         </div>
 
-        {/* Relógio em Tempo Real */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono">
-          <Clock className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-slate-400 capitalize">{currentDate}</span>
-          <span className="text-white font-bold tracking-wider">{currentTime}</span>
-        </div>
+        {/* Relógio em Tempo Real Isolado */}
+        <LiveClock />
 
         {/* Operador e Ações */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -411,7 +439,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
               </label>
             </div>
 
-            {/* Input com autofocus e live filter */}
+            {/* Input com prioridade de digitação imediata e debounce */}
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
@@ -525,7 +553,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
             </div>
           </div>
 
-          {/* Lista de Alunos e Contratos com Rolagem */}
+          {/* Lista de Alunos e Contratos com Rolagem Ultra Fluida */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
             {loading ? (
               <div className="p-8 text-center text-slate-500 text-xs">
@@ -563,13 +591,17 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                       </div>
                       <div className="min-w-0">
                         <div className="font-bold text-white text-xs truncate flex items-center gap-1.5">
-                          <span>{highlightMatch(m.nome_aluno, searchTerm)}</span>
+                          <span>
+                            <HighlightText text={m.nome_aluno} query={deferredSearch} />
+                          </span>
                           <span className="text-[10px] font-mono text-slate-400 font-normal">
-                            CPF: {highlightMatch(m.cpf_aluno || '-', searchTerm)}
+                            CPF: <HighlightText text={m.cpf_aluno || '-'} query={deferredSearch} />
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
-                          <span>{highlightMatch(m.curso, searchTerm)}</span>
+                          <span>
+                            <HighlightText text={m.curso} query={deferredSearch} />
+                          </span>
                           {m.tem_contrato && (
                             <>
                               <span>·</span>
@@ -577,6 +609,11 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                                 Parc. {m.parcelas_pagas}/{m.n_parcelas}
                               </span>
                             </>
+                          )}
+                          {m.origem === 'tb_caixa' && (
+                            <span className="text-[9px] bg-slate-800 text-slate-300 px-1 rounded">
+                              Caixa
+                            </span>
                           )}
                         </div>
                         {/* Badge de Status da Mensalidade */}
@@ -871,7 +908,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                     </div>
                     <div>
                       <span className="text-[10px] text-indigo-400 font-mono font-bold uppercase">
-                        Aluno(a) Cadastrado(a) na Tabela Alunos
+                        {selectedPlano.origem === 'tb_caixa' ? 'Pagador / Atendimento em Caixa' : 'Aluno(a) Cadastrado(a) na Base'}
                       </span>
                       <h3 className="text-base font-bold text-white">{selectedPlano.nome_aluno}</h3>
                       <div className="text-xs text-slate-400">
@@ -884,10 +921,10 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                   <div className="mt-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-xs text-amber-200">
                     <p className="font-semibold flex items-center gap-1.5">
                       <AlertTriangle className="w-4 h-4 text-amber-400" />
-                      Este aluno ainda não possui contrato financeiro de mensalidade registrado.
+                      Este cadastro ainda não possui contrato financeiro de mensalidades registrado.
                     </p>
                     <p className="text-[11px] text-amber-300/90 mt-1">
-                      Você pode gerar o contrato de mensalidades agora com 1 clique para habilitar os recebimentos.
+                      Você pode gerar o contrato de mensalidades agora com 1 clique para habilitar os recebimentos recorrentes.
                     </p>
                   </div>
 

@@ -70,6 +70,15 @@ export const api = {
       }
     ),
 
+  importJson: (jsonData: any, replaceExisting: boolean = true) =>
+    request<{ success: boolean; message: string; importedCount: number; tablesSummary: Record<string, number> }>(
+      '/database/import-json',
+      {
+        method: 'POST',
+        body: JSON.stringify({ jsonData, replaceExisting }),
+      }
+    ),
+
   getDashboardStats: () => request<any>('/dashboard/stats'),
 
   // Alunos

@@ -380,8 +380,61 @@ class DatabaseManager {
       }
     }
 
+      this.persist();
+    return { importedCount: totalImported, tablesSummary: summary };
+  }
+
+  // --- IMPORTAÇÃO DE DADOS JSON (.json) DIRETAMENTE PARA O BANCO E PLATAFORMA ---
+  public importJson(
+    jsonData: any,
+    replaceExisting: boolean = true
+  ): { importedCount: number; tablesSummary: Record<string, number> } {
+    if (!jsonData || typeof jsonData !== 'object') {
+      throw new Error('Arquivo ou estrutura JSON inválida.');
+    }
+
+    const tableKeys = [
+      'tb_cursos',
+      'tb_cursoLivre',
+      'tb_materias',
+      'tb_turmas',
+      'tb_alunos',
+      'tb_responsavel_financeiro',
+      'tb_notas',
+      'tb_mensalidades',
+      'tb_caixa',
+      'log_caixa',
+      'tb_despesas',
+      'tb_professores',
+      'tb_pagamentos',
+      'tb_pagamentos_parciais',
+      'tb_produtos',
+      'tb_vendas',
+      'tb_usuarios',
+      'tb_contas',
+    ];
+
+    const summary: Record<string, number> = {};
+    let totalImported = 0;
+
+    for (const key of tableKeys) {
+      if (Array.isArray(jsonData[key])) {
+        if (replaceExisting) {
+          (this.memDb as any)[key] = [...jsonData[key]];
+        } else {
+          (this.memDb as any)[key] = [...(this.memDb as any)[key], ...jsonData[key]];
+        }
+        summary[key] = jsonData[key].length;
+        totalImported += jsonData[key].length;
+      }
+    }
+
     this.persist();
     return { importedCount: totalImported, tablesSummary: summary };
+  }
+
+  public getRawDb() {
+    return this.memDb;
   }
 
   // Extrai strings de tuplas respeitando strings com parênteses
@@ -877,7 +930,7 @@ class DatabaseManager {
   public getPesquisaAlunosMensalidades(params: {
     search?: string;
     statusFiltro?: 'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS' | 'SEM_CONTRATO';
-  }) {
+  } = {}) {
     const today = new Date().toISOString().split('T')[0];
     const normalize = (str: string = '') =>
       str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -966,6 +1019,48 @@ class DatabaseManager {
           status_aluno: aluno.status || 'Ativo',
         });
       }
+    }
+
+    // 2. BUSCA COMPLEMENTAR NA TABELA TB_CAIXA (alunos de balcão, taxas ou pagamentos avulsos)
+    const knownAlunoIds = new Set(this.memDb.tb_alunos.map((a) => a.ID_aluno));
+    const knownAlunoNames = new Set(this.memDb.tb_alunos.map((a) => normalize(a.nome_aluno)));
+    const nonStudentKeywords = ['papelaria', 'enel', 'sabesp', 'aluguel', 'limpeza', 'material', 'internet', 'copiadora', 'manutencao', 'fornecedor'];
+
+    for (const caixa of this.memDb.tb_caixa) {
+      if (!caixa.nome || !caixa.nome.trim()) continue;
+      const nomeCaixaNorm = normalize(caixa.nome);
+
+      // Desconsiderar despesas ou fornecedores operacionais
+      const isSupplier = nonStudentKeywords.some((kw) => nomeCaixaNorm.includes(kw));
+      if (isSupplier) continue;
+
+      // Se já foi incluído via tb_alunos, não duplicar
+      if (caixa.idaluno && knownAlunoIds.has(caixa.idaluno)) continue;
+      if (knownAlunoNames.has(nomeCaixaNorm)) continue;
+
+      knownAlunoNames.add(nomeCaixaNorm);
+      results.push({
+        ID_mensalidade: caixa.idmensalidade || null,
+        idaluno: caixa.idaluno || (9000 + caixa.ID_caixa),
+        nome_aluno: caixa.nome,
+        cpf_aluno: '-',
+        email_aluno: '',
+        telefone_aluno: '',
+        curso: caixa.curso || 'Atendimento Balcão',
+        valor_total: Number(caixa.valor_total) || 0,
+        saldo_devedor: 0,
+        valor_parcela: Number(caixa.valor_total) || 0,
+        n_parcelas: 1,
+        parcelas_pagas: 1,
+        proxima_parcela: 1,
+        data_pagar: caixa.data || today,
+        status_parcela: 'PAGA',
+        status_label: 'Lançamento Caixa (Quitado)',
+        dias_atraso: 0,
+        tem_contrato: !!caixa.idmensalidade,
+        status_aluno: 'Ativo',
+        origem: 'tb_caixa',
+      });
     }
 
     // Filtragem por busca textual letra por letra
