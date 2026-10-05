@@ -225,27 +225,27 @@ export const AlunosView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Cadastro Geral de Alunos</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Cadastro Geral de Alunos</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Gerenciamento do prontuário acadêmico e dados cadastrais de alunos
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href="/api/export/csv/alunos"
             download
-            className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Exportar CSV</span>
           </a>
           <button
             onClick={handleOpenCreate}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5 min-h-[40px]"
           >
             <Plus className="w-4 h-4" />
             <span>Novo Aluno</span>
@@ -323,8 +323,8 @@ export const AlunosView: React.FC = () => {
 
       {/* Tabela de Alunos */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto touch-scroll">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] tracking-wider font-semibold">
               <tr>
                 <th className="px-4 py-3">ID / Código</th>

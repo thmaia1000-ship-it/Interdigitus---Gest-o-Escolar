@@ -124,10 +124,10 @@ export const MensalidadesView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Planos de Mensalidades</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Planos de Mensalidades</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Gestão de contratos financeiros, parcelas e saldos de alunos
           </p>
@@ -137,7 +137,7 @@ export const MensalidadesView: React.FC = () => {
             setMsg(null);
             setIsNovoContratoOpen(true);
           }}
-          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+          className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[40px]"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Plano Financeiro</span>
@@ -158,8 +158,8 @@ export const MensalidadesView: React.FC = () => {
       )}
 
       {/* Busca */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-        <form onSubmit={handleSearch} className="relative w-80">
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <form onSubmit={handleSearch} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
@@ -169,12 +169,12 @@ export const MensalidadesView: React.FC = () => {
             className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
           />
         </form>
-        <span className="text-xs text-slate-500 font-mono">{mensalidades.length} plano(s)</span>
+        <span className="text-xs text-slate-500 font-mono ml-auto sm:ml-0">{mensalidades.length} plano(s)</span>
       </div>
 
       {/* Tabela de Mensalidades */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-        <table className="w-full text-left text-xs">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-xs touch-scroll">
+        <table className="w-full text-left text-xs min-w-[720px]">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] tracking-wider font-semibold">
             <tr>
               <th className="px-4 py-3">ID Plano</th>

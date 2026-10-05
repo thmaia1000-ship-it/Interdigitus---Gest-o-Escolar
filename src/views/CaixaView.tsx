@@ -20,10 +20,23 @@ import {
   Filter,
   Check,
   Printer,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { FechamentoCaixaModal } from '../components/FechamentoCaixaModal.js';
 
-export const CaixaView: React.FC = () => {
+interface CaixaViewProps {
+  isExclusiveMode?: boolean;
+  onExitExclusive?: () => void;
+  onEnterExclusive?: () => void;
+}
+
+export const CaixaView: React.FC<CaixaViewProps> = ({
+  isExclusiveMode = false,
+  onExitExclusive,
+  onEnterExclusive,
+}) => {
   const [movimentos, setMovimentos] = useState<Caixa[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,33 +236,55 @@ export const CaixaView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Livro Caixa</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Livro Caixa</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Movimentações financeiras de entrada e saída do fluxo diário
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!isExclusiveMode && (
+            <a
+              href="/financeiro/caixa?exclusive=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs min-h-[40px]"
+              title="Abrir o Caixa em uma nova aba dedicada e exclusiva para esta atividade"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-indigo-700" />
+              <span>Abrir em Nova Aba Exclusiva</span>
+            </a>
+          )}
+          {!isExclusiveMode && onEnterExclusive && (
+            <button
+              onClick={onEnterExclusive}
+              className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px] shadow-2xs"
+              title="Fixar a tela atual como Terminal Exclusivo de Frente de Caixa"
+            >
+              <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+              <span>Modo Exclusivo</span>
+            </button>
+          )}
           <a
             href="/api/export/csv/caixa"
             download
-            className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Exportar CSV</span>
           </a>
           <button
             onClick={handleOpenCreate}
-            className="px-3 py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs min-h-[40px]"
           >
             <Plus className="w-4 h-4 text-slate-600" />
             <span>Lançamento Avulso</span>
           </button>
           <button
             onClick={() => setIsFechamentoOpen(true)}
-            className="px-3.5 py-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs min-h-[40px]"
             title="Gerar e imprimir relatório de fechamento do operador"
           >
             <Printer className="w-4 h-4 text-indigo-600" />
@@ -257,13 +292,26 @@ export const CaixaView: React.FC = () => {
           </button>
           <button
             onClick={handleOpenReceberMensalidade}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+            className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[40px]"
           >
             <Receipt className="w-4 h-4" />
             <span>Receber Mensalidade do Aluno</span>
           </button>
         </div>
       </div>
+
+      {/* Faixa de Notificação / Modo Exclusivo de Frente de Caixa */}
+      {isExclusiveMode && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-emerald-900 font-semibold">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+            <span>Terminal Operacional Exclusivo para Movimentações do Caixa</span>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-emerald-700 font-medium">
+            <span>Todas as funções acadêmicas e de navegação foram recolhidas para foco exclusivo no caixa.</span>
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div
@@ -377,8 +425,8 @@ export const CaixaView: React.FC = () => {
       </div>
 
       {/* Tabela do Livro Caixa */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-        <table className="w-full text-left text-xs">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-xs touch-scroll">
+        <table className="w-full text-left text-xs min-w-[680px]">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] tracking-wider font-semibold">
             <tr>
               <th className="px-4 py-3">ID / Data</th>

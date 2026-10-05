@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { Header } from './components/layout/Header.js';
 import { Sidebar } from './components/layout/Sidebar.js';
+import { MobileBottomNav } from './components/layout/MobileBottomNav.js';
+import { CaixaExclusivoHeader } from './components/layout/CaixaExclusivoHeader.js';
 
 // Views
 import { LoginView } from './views/LoginView.js';
@@ -37,7 +39,30 @@ import { UserRole } from './types/schema.js';
 
 function MainApp() {
   const { user, loading, hasPermission } = useAuth();
-  const [currentPath, setCurrentPath] = useState<string>('/');
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('exclusive') === 'true' || pathname === '/financeiro/caixa' || pathname === '/caixa') {
+        return '/financeiro/caixa';
+      }
+      if (pathname && pathname !== '/') {
+        return pathname;
+      }
+    }
+    return '/';
+  });
+
+  const [isCaixaExclusive, setIsCaixaExclusive] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const pathname = window.location.pathname;
+      return params.get('exclusive') === 'true' || pathname === '/financeiro/caixa' || pathname === '/caixa';
+    }
+    return false;
+  });
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (user?.role === 'Aluno') {
@@ -131,7 +156,12 @@ function MainApp() {
       case '/financeiro/mensalidades':
         return <MensalidadesView />;
       case '/financeiro/caixa':
-        return <CaixaView />;
+        return (
+          <CaixaView
+            isExclusiveMode={false}
+            onEnterExclusive={() => setIsCaixaExclusive(true)}
+          />
+        );
       case '/financeiro/despesas':
         return <DespesasView />;
       case '/financeiro/pagamentos-professores':
@@ -159,12 +189,64 @@ function MainApp() {
     }
   };
 
+  // Se estiver no Modo Exclusivo de Frente de Caixa (nova aba ou tela dedicada)
+  if (isCaixaExclusive && currentPath === '/financeiro/caixa') {
+    return (
+      <div className="h-screen bg-slate-50 overflow-hidden flex flex-col font-sans select-none">
+        <CaixaExclusivoHeader
+          onExit={() => {
+            setIsCaixaExclusive(false);
+            setCurrentPath('/');
+            if (typeof window !== 'undefined' && window.history.pushState) {
+              window.history.pushState({}, '', '/');
+            }
+          }}
+        />
+        <main className="flex-1 overflow-y-auto">
+          <CaixaView
+            isExclusiveMode={true}
+            onExitExclusive={() => {
+              setIsCaixaExclusive(false);
+              setCurrentPath('/');
+              if (typeof window !== 'undefined' && window.history.pushState) {
+                window.history.pushState({}, '', '/');
+              }
+            }}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      <Sidebar currentPath={currentPath} onNavigate={setCurrentPath} />
+      <Sidebar
+        currentPath={currentPath}
+        onNavigate={(path) => {
+          setCurrentPath(path);
+          setMobileMenuOpen(false);
+        }}
+        isOpenMobile={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+      />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header currentPath={currentPath} onNavigate={setCurrentPath} />
-        <main className="flex-1 overflow-y-auto">{renderContent()}</main>
+        <Header
+          currentPath={currentPath}
+          onNavigate={(path) => {
+            setCurrentPath(path);
+            setMobileMenuOpen(false);
+          }}
+          onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
+        />
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">{renderContent()}</main>
+        <MobileBottomNav
+          currentPath={currentPath}
+          onNavigate={(path) => {
+            setCurrentPath(path);
+            setMobileMenuOpen(false);
+          }}
+          onOpenMenu={() => setMobileMenuOpen(true)}
+        />
       </div>
     </div>
   );

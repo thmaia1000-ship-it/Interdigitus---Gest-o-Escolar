@@ -3,11 +3,8 @@ import { useAuth } from '../../context/AuthContext.js';
 import {
   LayoutDashboard,
   Users,
-  UserSquare2,
   BookOpen,
   GraduationCap,
-  Library,
-  School,
   FileCheck2,
   Receipt,
   Wallet,
@@ -24,15 +21,24 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Menu,
+  X,
+  School,
+  Library,
 } from 'lucide-react';
 
 interface SidebarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentPath,
+  onNavigate,
+  isOpenMobile = false,
+  onCloseMobile,
+}) => {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('academico');
@@ -41,76 +47,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
     setOpenSection(openSection === section ? null : section);
   };
 
+  const handleNavigate = (path: string) => {
+    onNavigate(path);
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
   const isCurrent = (path: string) => currentPath === path;
 
-  // Se o usuário for Aluno, mostrar menu específico do Portal do Aluno
-  if (user?.role === 'Aluno') {
-    return (
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 select-none">
-        <div className="h-16 px-5 border-b border-slate-800 flex items-center gap-3 bg-slate-950">
-          <GraduationCap className="w-6 h-6 text-indigo-400" />
-          <div>
-            <div className="font-bold text-sm tracking-tight text-white">INTERDIGITUS</div>
-            <div className="text-[10px] text-indigo-400 uppercase tracking-widest font-mono">Portal do Aluno</div>
-          </div>
-        </div>
+  // Renderizador do Conteúdo de Navegação (compartilhado entre desktop e gaveta móvel)
+  const renderNavContent = (isMobile: boolean = false) => {
+    const isExpanded = isMobile || !collapsed;
 
+    if (user?.role === 'Aluno') {
+      return (
         <nav className="p-3 space-y-1 flex-1">
           <button
-            onClick={() => onNavigate('/portal-aluno')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+            onClick={() => handleNavigate('/portal-aluno')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-medium transition-colors min-h-[44px] ${
               isCurrent('/portal-aluno')
                 ? 'bg-indigo-600 text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
+            <BookOpen className="w-4 h-4 shrink-0" />
             <span>Meu Prontuário & Notas</span>
           </button>
         </nav>
-      </aside>
-    );
-  }
+      );
+    }
 
-  return (
-    <aside
-      className={`bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 transition-all duration-200 select-none ${
-        collapsed ? 'w-18' : 'w-68'
-      }`}
-    >
-      {/* Brand Header */}
-      <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-        {!collapsed && (
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-              ID
-            </div>
-            <div>
-              <div className="font-bold text-sm tracking-tight text-white leading-tight">INTERDIGITUS</div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Gestão Escolar</div>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className="mx-auto w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
-            ID
-          </div>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors hidden sm:block"
-          title={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {/* Main Nav Tree */}
+    return (
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar text-xs">
         {/* 1. Dashboard */}
         <button
-          onClick={() => onNavigate('/')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+          onClick={() => handleNavigate('/')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors min-h-[44px] ${
             isCurrent('/')
               ? 'bg-indigo-600 text-white font-semibold shadow-sm'
               : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -118,32 +91,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
           title="Dashboard Geral"
         >
           <LayoutDashboard className="w-4 h-4 shrink-0 text-indigo-400" />
-          {!collapsed && <span>1. Dashboard</span>}
+          {isExpanded && <span>1. Dashboard</span>}
         </button>
 
         {/* 2. Acadêmico */}
         <div>
           <button
             onClick={() => toggleSection('academico')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium"
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium min-h-[44px]"
             title="Módulo Acadêmico"
           >
             <div className="flex items-center gap-3">
               <GraduationCap className="w-4 h-4 shrink-0 text-blue-400" />
-              {!collapsed && <span>2. Acadêmico</span>}
+              {isExpanded && <span>2. Acadêmico</span>}
             </div>
-            {!collapsed && (
+            {isExpanded && (
               <ChevronDown
                 className={`w-3.5 h-3.5 transition-transform ${openSection === 'academico' ? 'rotate-180' : ''}`}
               />
             )}
           </button>
 
-          {(!collapsed && openSection === 'academico') && (
+          {(isExpanded && openSection === 'academico') && (
             <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
               <button
-                onClick={() => onNavigate('/academico/alunos')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/alunos')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/alunos')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -152,8 +125,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                 Alunos
               </button>
               <button
-                onClick={() => onNavigate('/academico/responsaveis')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/responsaveis')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/responsaveis')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -162,8 +135,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                 Responsáveis Financeiros
               </button>
               <button
-                onClick={() => onNavigate('/academico/cursos')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/cursos')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/cursos')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -172,18 +145,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                 Cursos Regulares
               </button>
               <button
-                onClick={() => onNavigate('/academico/cursos-livres')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/cursos-livres')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/cursos-livres')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Cursos Livres
+                Cursos Livres / Extensão
               </button>
               <button
-                onClick={() => onNavigate('/academico/disciplinas')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/disciplinas')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/disciplinas')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -192,18 +165,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                 Disciplinas
               </button>
               <button
-                onClick={() => onNavigate('/academico/turmas')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/turmas')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/turmas')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Turmas
+                Turmas & Salas
               </button>
               <button
-                onClick={() => onNavigate('/academico/notas')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/academico/notas')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/academico/notas')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -219,46 +192,60 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
         <div>
           <button
             onClick={() => toggleSection('financeiro')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium"
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium min-h-[44px]"
             title="Módulo Financeiro"
           >
             <div className="flex items-center gap-3">
-              <Receipt className="w-4 h-4 shrink-0 text-emerald-400" />
-              {!collapsed && <span>3. Financeiro</span>}
+              <Wallet className="w-4 h-4 shrink-0 text-emerald-400" />
+              {isExpanded && <span>3. Financeiro</span>}
             </div>
-            {!collapsed && (
+            {isExpanded && (
               <ChevronDown
                 className={`w-3.5 h-3.5 transition-transform ${openSection === 'financeiro' ? 'rotate-180' : ''}`}
               />
             )}
           </button>
 
-          {(!collapsed && openSection === 'financeiro') && (
+          {(isExpanded && openSection === 'financeiro') && (
             <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
               <button
-                onClick={() => onNavigate('/financeiro/caixa')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors flex items-center justify-between ${
-                  isCurrent('/financeiro/caixa')
-                    ? 'text-white font-semibold bg-emerald-600 shadow-xs'
-                    : 'text-emerald-400 font-medium hover:text-emerald-300 hover:bg-slate-800/60'
-                }`}
-              >
-                <span>Caixa (Recebimentos)</span>
-                <span className="text-[9px] px-1 py-0.2 bg-emerald-500/20 text-emerald-300 rounded font-mono">Alunos</span>
-              </button>
-              <button
-                onClick={() => onNavigate('/financeiro/mensalidades')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/financeiro/mensalidades')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/financeiro/mensalidades')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Mensalidades & Contratos
+                Mensalidades Escolares
               </button>
+              <div className="flex items-center justify-between group rounded-md hover:bg-slate-800/40">
+                <button
+                  onClick={() => handleNavigate('/financeiro/caixa')}
+                  className={`flex-1 text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center justify-between ${
+                    isCurrent('/financeiro/caixa')
+                      ? 'text-white font-semibold bg-slate-800'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>Livro Caixa</span>
+                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/50">
+                    Exclusivo
+                  </span>
+                </button>
+                <a
+                  href="/financeiro/caixa?exclusive=true"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-slate-400 hover:text-emerald-400 rounded-md transition-colors"
+                  title="Abrir Caixa em Nova Aba Exclusiva (Terminal do Operador)"
+                  aria-label="Abrir Caixa em Nova Aba Exclusiva"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
               <button
-                onClick={() => onNavigate('/financeiro/despesas')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/financeiro/despesas')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/financeiro/despesas')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -267,18 +254,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
                 Despesas Operacionais
               </button>
               <button
-                onClick={() => onNavigate('/financeiro/pagamentos-professores')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/financeiro/pagamentos-professores')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/financeiro/pagamentos-professores')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Pagamentos Professores
+                Honorários Docentes
               </button>
               <button
-                onClick={() => onNavigate('/financeiro/pagamentos-parciais')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/financeiro/pagamentos-parciais')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/financeiro/pagamentos-parciais')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -290,122 +277,142 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
           )}
         </div>
 
-        {/* 4. Comercial */}
+        {/* 4. Pessoas & Docência */}
+        <div>
+          <button
+            onClick={() => toggleSection('pessoas')}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium min-h-[44px]"
+            title="Corpo Docente"
+          >
+            <div className="flex items-center gap-3">
+              <Users className="w-4 h-4 shrink-0 text-amber-400" />
+              {isExpanded && <span>4. Docência</span>}
+            </div>
+            {isExpanded && (
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform ${openSection === 'pessoas' ? 'rotate-180' : ''}`}
+              />
+            )}
+          </button>
+
+          {(isExpanded && openSection === 'pessoas') && (
+            <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
+              <button
+                onClick={() => handleNavigate('/pessoas/professores')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
+                  isCurrent('/pessoas/professores')
+                    ? 'text-white font-semibold bg-slate-800'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                }`}
+              >
+                Professores
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Comercial & Vendas */}
         <div>
           <button
             onClick={() => toggleSection('comercial')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium"
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium min-h-[44px]"
             title="Módulo Comercial"
           >
             <div className="flex items-center gap-3">
-              <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-              {!collapsed && <span>4. Comercial</span>}
+              <ShoppingBag className="w-4 h-4 shrink-0 text-purple-400" />
+              {isExpanded && <span>5. Comercial</span>}
             </div>
-            {!collapsed && (
+            {isExpanded && (
               <ChevronDown
                 className={`w-3.5 h-3.5 transition-transform ${openSection === 'comercial' ? 'rotate-180' : ''}`}
               />
             )}
           </button>
 
-          {(!collapsed && openSection === 'comercial') && (
+          {(isExpanded && openSection === 'comercial') && (
             <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
               <button
-                onClick={() => onNavigate('/comercial/produtos')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/comercial/produtos')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/comercial/produtos')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Produtos / Estoque
+                Produtos & Livros
               </button>
               <button
-                onClick={() => onNavigate('/comercial/vendas')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/comercial/vendas')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/comercial/vendas')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Vendas & Pedidos
+                Balcão de Vendas (PDV)
               </button>
             </div>
           )}
         </div>
 
-        {/* 5. Pessoas */}
-        <button
-          onClick={() => onNavigate('/pessoas/professores')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
-            isCurrent('/pessoas/professores')
-              ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-          }`}
-          title="Cadastro de Professores"
-        >
-          <Users className="w-4 h-4 shrink-0 text-cyan-400" />
-          {!collapsed && <span>5. Pessoas (Professores)</span>}
-        </button>
-
         {/* 6. Administração */}
         <div>
           <button
-            onClick={() => toggleSection('administracao')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium"
-            title="Administração e Auditoria"
+            onClick={() => toggleSection('admin')}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors font-medium min-h-[44px]"
+            title="Administração & Auditoria"
           >
             <div className="flex items-center gap-3">
-              <KeyRound className="w-4 h-4 shrink-0 text-rose-400" />
-              {!collapsed && <span>6. Administração</span>}
+              <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+              {isExpanded && <span>6. Administração</span>}
             </div>
-            {!collapsed && (
+            {isExpanded && (
               <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform ${openSection === 'administracao' ? 'rotate-180' : ''}`}
+                className={`w-3.5 h-3.5 transition-transform ${openSection === 'admin' ? 'rotate-180' : ''}`}
               />
             )}
           </button>
 
-          {(!collapsed && openSection === 'administracao') && (
+          {(isExpanded && openSection === 'admin') && (
             <div className="pl-7 pr-2 py-1 space-y-0.5 border-l border-slate-800 ml-4 my-1">
               <button
-                onClick={() => onNavigate('/administracao/usuarios')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/administracao/usuarios')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/administracao/usuarios')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Usuários Internos
+                Usuários do Sistema
               </button>
               <button
-                onClick={() => onNavigate('/administracao/contas-alunos')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/administracao/contas-alunos')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/administracao/contas-alunos')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Acesso de Alunos
+                Contas do Portal do Aluno
               </button>
               <button
-                onClick={() => onNavigate('/administracao/auditoria-caixa')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors ${
+                onClick={() => handleNavigate('/administracao/auditoria-caixa')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
                   isCurrent('/administracao/auditoria-caixa')
                     ? 'text-white font-semibold bg-slate-800'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                Auditoria do Caixa
+                Auditoria do Caixa (Log)
               </button>
             </div>
           )}
         </div>
 
-        {/* 7. Relatórios */}
+        {/* 7. Relatórios & CSV */}
         <button
-          onClick={() => onNavigate('/relatorios')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+          onClick={() => handleNavigate('/relatorios')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors min-h-[44px] ${
             isCurrent('/relatorios')
               ? 'bg-indigo-600 text-white font-semibold shadow-sm'
               : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -413,14 +420,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
           title="Relatórios & Exportações"
         >
           <FileSpreadsheet className="w-4 h-4 shrink-0 text-violet-400" />
-          {!collapsed && <span>7. Relatórios & CSV</span>}
+          {isExpanded && <span>7. Relatórios & CSV</span>}
         </button>
 
         {/* 8. Portal do Aluno */}
         <div className="pt-2 border-t border-slate-800/80">
           <button
-            onClick={() => onNavigate('/portal-aluno')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+            onClick={() => handleNavigate('/portal-aluno')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors min-h-[44px] ${
               isCurrent('/portal-aluno')
                 ? 'bg-indigo-600 text-white font-semibold shadow-sm'
                 : 'text-indigo-300 hover:text-white hover:bg-indigo-950/40'
@@ -428,18 +435,104 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
             title="Portal Restrito do Aluno"
           >
             <ExternalLink className="w-4 h-4 shrink-0 text-indigo-400" />
-            {!collapsed && <span>8. Portal do Aluno</span>}
+            {isExpanded && <span>8. Portal do Aluno</span>}
           </button>
         </div>
       </nav>
+    );
+  };
 
-      {/* Footer Info */}
-      {!collapsed && (
-        <div className="p-3 border-t border-slate-800 bg-slate-950/70 text-[11px] text-slate-500">
-          <div>dbinterdigitus · MySQL 8.x</div>
-          <div className="text-[10px] text-slate-600">18 tabelas operacionais</div>
+  return (
+    <>
+      {/* 1. GAVETA MÓVEL PARA SMARTPHONES E TABLETS (< lg) */}
+      {isOpenMobile && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop escurecido */}
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+
+          {/* Painel lateral deslizante */}
+          <aside className="relative w-72 max-w-[85vw] bg-slate-900 text-slate-300 flex flex-col h-full z-10 shadow-2xl border-r border-slate-800 animate-in slide-in-from-left duration-200">
+            {/* Topo da Gaveta */}
+            <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+                  ID
+                </div>
+                <div>
+                  <div className="font-bold text-sm tracking-tight text-white leading-tight">INTERDIGITUS</div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Gestão Escolar</div>
+                </div>
+              </div>
+              <button
+                onClick={onCloseMobile}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+                title="Fechar menu"
+                aria-label="Fechar menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo de Navegação Móvel */}
+            {renderNavContent(true)}
+
+            {/* Rodapé Móvel */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/90 text-[11px] text-slate-500 shrink-0 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+              <div className="font-medium text-slate-400">{user?.nome}</div>
+              <div className="text-[10px] text-indigo-400 font-mono">Perfil: {user?.role}</div>
+            </div>
+          </aside>
         </div>
       )}
-    </aside>
+
+      {/* 2. SIDEBAR DESKTOP FIXA (>= lg) */}
+      <aside
+        className={`hidden lg:flex bg-slate-900 text-slate-300 flex-col shrink-0 border-r border-slate-800 transition-all duration-200 select-none ${
+          collapsed ? 'w-18' : 'w-68'
+        }`}
+      >
+        {/* Brand Header Desktop */}
+        <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0">
+          {!collapsed && (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+                ID
+              </div>
+              <div>
+                <div className="font-bold text-sm tracking-tight text-white leading-tight">INTERDIGITUS</div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Gestão Escolar</div>
+              </div>
+            </div>
+          )}
+          {collapsed && (
+            <div className="mx-auto w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
+              ID
+            </div>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            title={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+          >
+            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* Navegação Desktop */}
+        {renderNavContent(false)}
+
+        {/* Rodapé Desktop */}
+        {!collapsed && (
+          <div className="p-3 border-t border-slate-800 bg-slate-950/70 text-[11px] text-slate-500 shrink-0">
+            <div>dbinterdigitus · MySQL 8.x</div>
+            <div className="text-[10px] text-slate-600">18 tabelas operacionais</div>
+          </div>
+        )}
+      </aside>
+    </>
   );
 };

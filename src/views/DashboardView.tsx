@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   CalendarClock,
   ArrowUpRight,
+  ExternalLink,
 } from 'lucide-react';
 
 export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = ({ onNavigate }) => {
@@ -72,29 +73,33 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
   const percentArrecadado = totalPrevisto > 0 ? Math.min(100, Math.round((entradasMes / totalPrevisto) * 100)) : 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Header & Ações */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Painel de Controle Escolar</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Painel de Controle Escolar</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Métricas financeiras e acadêmicas apuradas em tempo real do banco <code className="font-mono text-indigo-600">dbinterdigitus</code>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => onNavigate('/academico/alunos')}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+            className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm min-h-[40px] flex items-center justify-center"
           >
             Novo Aluno
           </button>
-          <button
-            onClick={() => onNavigate('/financeiro/caixa')}
-            className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+          <a
+            href="/financeiro/caixa?exclusive=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px] shadow-2xs"
+            title="Abrir o Caixa em uma nova aba exclusiva para esta atividade"
           >
-            <Receipt className="w-3.5 h-3.5 text-slate-600" />
-            <span>Ver Livro Caixa</span>
-          </button>
+            <Receipt className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Frente de Caixa (Nova Aba)</span>
+            <ExternalLink className="w-3 h-3 text-emerald-600" />
+          </a>
         </div>
       </div>
 
