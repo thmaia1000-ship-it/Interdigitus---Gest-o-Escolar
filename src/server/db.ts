@@ -932,11 +932,11 @@ class DatabaseManager {
     statusFiltro?: 'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS' | 'SEM_CONTRATO';
   } = {}) {
     const today = new Date().toISOString().split('T')[0];
-    const normalize = (str: string = '') =>
-      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const normalize = (str: any = '') =>
+      String(str ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
     const q = params.search ? normalize(params.search) : '';
-    const cleanDigits = params.search ? params.search.replace(/[^\d]/g, '') : '';
+    const cleanDigits = params.search ? String(params.search).replace(/[^\d]/g, '') : '';
     const filtro = params.statusFiltro || 'TODAS';
 
     // Lista abrangendo TODOS os nomes da tabela tb_alunos
@@ -945,6 +945,7 @@ class DatabaseManager {
     for (const aluno of this.memDb.tb_alunos) {
       const cursoDb = aluno.idcurso ? this.memDb.tb_cursos.find((c) => c.ID_curso === aluno.idcurso) : null;
       const nomeCurso = cursoDb?.nome_curso || (aluno.idcurso ? `Curso #${aluno.idcurso}` : 'Geral');
+      const safeCpf = aluno.cpf !== null && aluno.cpf !== undefined ? String(aluno.cpf) : '-';
 
       // Buscar contratos deste aluno
       const contratos = this.memDb.tb_mensalidades.filter((m) => m.idaluno === aluno.ID_aluno);
@@ -976,8 +977,8 @@ class DatabaseManager {
           results.push({
             ID_mensalidade: m.ID_mensalidade,
             idaluno: aluno.ID_aluno,
-            nome_aluno: aluno.nome_aluno,
-            cpf_aluno: aluno.cpf || '-',
+            nome_aluno: String(aluno.nome_aluno || 'Aluno sem nome'),
+            cpf_aluno: safeCpf,
             email_aluno: aluno.email || '',
             telefone_aluno: aluno.telefone || '',
             curso: m.curso || nomeCurso,
@@ -1000,8 +1001,8 @@ class DatabaseManager {
         results.push({
           ID_mensalidade: null,
           idaluno: aluno.ID_aluno,
-          nome_aluno: aluno.nome_aluno,
-          cpf_aluno: aluno.cpf || '-',
+          nome_aluno: String(aluno.nome_aluno || 'Aluno sem nome'),
+          cpf_aluno: safeCpf,
           email_aluno: aluno.email || '',
           telefone_aluno: aluno.telefone || '',
           curso: nomeCurso,
@@ -1042,7 +1043,7 @@ class DatabaseManager {
       results.push({
         ID_mensalidade: caixa.idmensalidade || null,
         idaluno: caixa.idaluno || (9000 + caixa.ID_caixa),
-        nome_aluno: caixa.nome,
+        nome_aluno: String(caixa.nome),
         cpf_aluno: '-',
         email_aluno: '',
         telefone_aluno: '',
@@ -1068,7 +1069,7 @@ class DatabaseManager {
     if (q) {
       filtered = filtered.filter((item) => {
         const nomeNorm = normalize(item.nome_aluno);
-        const cpfItem = (item.cpf_aluno || '').replace(/[^\d]/g, '');
+        const cpfItem = String(item.cpf_aluno ?? '').replace(/[^\d]/g, '');
         const cursoNorm = normalize(item.curso);
         const statusNorm = normalize(item.status_parcela);
         const labelNorm = normalize(item.status_label);

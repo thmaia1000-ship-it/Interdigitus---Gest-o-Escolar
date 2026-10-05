@@ -26,20 +26,26 @@ import {
   PlusCircle,
 } from 'lucide-react';
 
-// Normalização para busca sem acentos e minúsculo
-const normalizeSearch = (str: string = '') =>
-  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+// Normalização ultra-segura para busca sem acentos e minúsculo (suporta números, strings e null)
+const normalizeSearch = (str: any = '') =>
+  String(str ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
-// Realce visual ultra-rápido das letras correspondentes
-const HighlightText: React.FC<{ text: string; query: string }> = React.memo(({ text, query }) => {
-  if (!query || !query.trim() || !text) return <>{text}</>;
-  const qNorm = normalizeSearch(query);
-  const textNorm = normalizeSearch(text);
+// Realce visual ultra-rápido e à prova de falhas com qualquer tipo de dado
+const HighlightText: React.FC<{ text: any; query: any }> = React.memo(({ text, query }) => {
+  const textStr = String(text ?? '');
+  const queryStr = String(query ?? '').trim();
+  if (!queryStr || !textStr) return <>{textStr}</>;
+  const qNorm = normalizeSearch(queryStr);
+  const textNorm = normalizeSearch(textStr);
   const idx = textNorm.indexOf(qNorm);
-  if (idx === -1) return <>{text}</>;
-  const start = text.slice(0, idx);
-  const match = text.slice(idx, idx + query.trim().length);
-  const end = text.slice(idx + query.trim().length);
+  if (idx === -1) return <>{textStr}</>;
+  const start = textStr.slice(0, idx);
+  const match = textStr.slice(idx, idx + queryStr.length);
+  const end = textStr.slice(idx + queryStr.length);
   return (
     <>
       {start}
@@ -149,17 +155,25 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     setLoading(true);
     try {
       const data = await api.getPesquisaAlunosMensalidades();
-      // Pré-indexar termos em minúsculo e sem acento uma única vez
-      const indexed = data.map((item: any) => ({
-        ...item,
-        _normNome: normalizeSearch(item.nome_aluno || ''),
-        _cleanCpf: (item.cpf_aluno || '').replace(/[^\d]/g, ''),
-        _normCurso: normalizeSearch(item.curso || ''),
-        _normStatus: normalizeSearch(item.status_parcela || ''),
-        _normLabel: normalizeSearch(item.status_label || ''),
-        _cleanId: String(item.idaluno || ''),
-        _cleanMensId: item.ID_mensalidade ? String(item.ID_mensalidade) : '',
-      }));
+      // Pré-indexar termos em minúsculo e sem acento uma única vez protegendo contra números em CPFs ou nomes
+      const indexed = (data || []).map((item: any) => {
+        const cpfStr = item.cpf_aluno !== null && item.cpf_aluno !== undefined ? String(item.cpf_aluno) : '-';
+        const cleanCpfDigits = String(item.cpf_aluno ?? '').replace(/[^\d]/g, '');
+
+        return {
+          ...item,
+          nome_aluno: String(item.nome_aluno || 'Aluno sem nome'),
+          cpf_aluno: cpfStr,
+          curso: String(item.curso || 'Geral'),
+          _normNome: normalizeSearch(item.nome_aluno),
+          _cleanCpf: cleanCpfDigits,
+          _normCurso: normalizeSearch(item.curso),
+          _normStatus: normalizeSearch(item.status_parcela),
+          _normLabel: normalizeSearch(item.status_label),
+          _cleanId: String(item.idaluno ?? ''),
+          _cleanMensId: item.ID_mensalidade ? String(item.ID_mensalidade) : '',
+        };
+      });
 
       setItens(indexed);
       if (indexed.length > 0 && !selectedPlano) {
@@ -225,7 +239,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   // Filtragem ultra-rápida usando deferredSearch e campos pré-indexados
   const filteredItens = useMemo(() => {
     const term = normalizeSearch(deferredSearch);
-    const cleanDigits = deferredSearch.replace(/[^\d]/g, '');
+    const cleanDigits = String(deferredSearch ?? '').replace(/[^\d]/g, '');
 
     return itens.filter((item) => {
       // Filtro de aba
@@ -564,110 +578,118 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                 Nenhum aluno ou contrato localizado para o filtro selecionado.
               </div>
             ) : (
-              filteredItens.map((m) => {
-                const isSelected =
-                  (m.ID_mensalidade && selectedPlano?.ID_mensalidade === m.ID_mensalidade) ||
-                  (!m.ID_mensalidade && selectedPlano?.idaluno === m.idaluno);
+              <>
+                {filteredItens.slice(0, 60).map((m) => {
+                  const isSelected =
+                    (m.ID_mensalidade && selectedPlano?.ID_mensalidade === m.ID_mensalidade) ||
+                    (!m.ID_mensalidade && selectedPlano?.idaluno === m.idaluno);
 
-                return (
-                  <div
-                    key={`${m.idaluno}-${m.ID_mensalidade || 'sem'}`}
-                    onClick={() => selectPlano(m)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-emerald-950/80 border-emerald-500 ring-2 ring-emerald-500/30 shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                          isSelected
-                            ? 'border-emerald-500 bg-emerald-600 text-white'
-                            : 'border-slate-700 bg-slate-900'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-white text-xs truncate flex items-center gap-1.5">
-                          <span>
-                            <HighlightText text={m.nome_aluno} query={deferredSearch} />
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400 font-normal">
-                            CPF: <HighlightText text={m.cpf_aluno || '-'} query={deferredSearch} />
-                          </span>
+                  return (
+                    <div
+                      key={`${m.idaluno}-${m.ID_mensalidade || 'sem'}`}
+                      onClick={() => selectPlano(m)}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-emerald-950/80 border-emerald-500 ring-2 ring-emerald-500/30 shadow-md'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-600 text-white'
+                              : 'border-slate-700 bg-slate-900'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
-                          <span>
-                            <HighlightText text={m.curso} query={deferredSearch} />
-                          </span>
-                          {m.tem_contrato && (
-                            <>
-                              <span>·</span>
-                              <span>
-                                Parc. {m.parcelas_pagas}/{m.n_parcelas}
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-xs truncate flex items-center gap-1.5">
+                            <span>
+                              <HighlightText text={m.nome_aluno} query={deferredSearch} />
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 font-normal">
+                              CPF: <HighlightText text={m.cpf_aluno || '-'} query={deferredSearch} />
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
+                            <span>
+                              <HighlightText text={m.curso} query={deferredSearch} />
+                            </span>
+                            {m.tem_contrato && (
+                              <>
+                                <span>·</span>
+                                <span>
+                                  Parc. {m.parcelas_pagas}/{m.n_parcelas}
+                                </span>
+                              </>
+                            )}
+                            {m.origem === 'tb_caixa' && (
+                              <span className="text-[9px] bg-slate-800 text-slate-300 px-1 rounded">
+                                Caixa
                               </span>
-                            </>
-                          )}
-                          {m.origem === 'tb_caixa' && (
-                            <span className="text-[9px] bg-slate-800 text-slate-300 px-1 rounded">
-                              Caixa
-                            </span>
-                          )}
-                        </div>
-                        {/* Badge de Status da Mensalidade */}
-                        <div className="mt-1 flex items-center gap-1.5">
-                          {m.status_parcela === 'VENCIDA' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                              VENCIDA {m.dias_atraso > 0 ? `(${m.dias_atraso}d em atraso)` : ''}
-                            </span>
-                          )}
-                          {m.status_parcela === 'AVENCER' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
-                              A VENCER ({m.data_pagar || 'No prazo'})
-                            </span>
-                          )}
-                          {m.status_parcela === 'PAGA' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                              PAGA (Quitada)
-                            </span>
-                          )}
-                          {m.status_parcela === 'SEM_CONTRATO' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                              Sem Contrato Gerado
-                            </span>
-                          )}
+                            )}
+                          </div>
+                          {/* Badge de Status da Mensalidade */}
+                          <div className="mt-1 flex items-center gap-1.5">
+                            {m.status_parcela === 'VENCIDA' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                VENCIDA {m.dias_atraso > 0 ? `(${m.dias_atraso}d em atraso)` : ''}
+                              </span>
+                            )}
+                            {m.status_parcela === 'AVENCER' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                                A VENCER ({m.data_pagar || 'No prazo'})
+                              </span>
+                            )}
+                            {m.status_parcela === 'PAGA' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                PAGA (Quitada)
+                              </span>
+                            )}
+                            {m.status_parcela === 'SEM_CONTRATO' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                                Sem Contrato Gerado
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-500 block">Saldo</span>
-                      <span
-                        className={`font-mono font-bold text-xs ${
-                          m.status_parcela === 'VENCIDA'
-                            ? 'text-rose-400'
-                            : m.status_parcela === 'AVENCER'
-                            ? 'text-amber-400'
-                            : m.status_parcela === 'PAGA'
-                            ? 'text-emerald-400'
-                            : 'text-slate-500'
-                        }`}
-                      >
-                        {m.tem_contrato ? formatMoney(m.saldo_devedor) : 'R$ 0,00'}
-                      </span>
-                      {m.tem_contrato && (
-                        <span className="text-[10px] text-slate-500 block font-mono">
-                          {formatMoney(m.valor_parcela)}/mês
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-slate-500 block">Saldo</span>
+                        <span
+                          className={`font-mono font-bold text-xs ${
+                            m.status_parcela === 'VENCIDA'
+                              ? 'text-rose-400'
+                              : m.status_parcela === 'AVENCER'
+                              ? 'text-amber-400'
+                              : m.status_parcela === 'PAGA'
+                              ? 'text-emerald-400'
+                              : 'text-slate-500'
+                          }`}
+                        >
+                          {m.tem_contrato ? formatMoney(m.saldo_devedor) : 'R$ 0,00'}
                         </span>
-                      )}
+                        {m.tem_contrato && (
+                          <span className="text-[10px] text-slate-500 block font-mono">
+                            {formatMoney(m.valor_parcela)}/mês
+                          </span>
+                        )}
+                      </div>
                     </div>
+                  );
+                })}
+
+                {filteredItens.length > 60 && (
+                  <div className="p-3 text-center text-[11px] text-slate-400 bg-slate-950/70 rounded-xl border border-slate-800">
+                    Exibindo os primeiros 60 de {filteredItens.length.toLocaleString('pt-BR')} resultados. Digite letras para refinar.
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         </div>
