@@ -1007,14 +1007,31 @@ class DatabaseManager {
       list = list.filter((c) => c.data && c.data <= params.data_fim!);
     }
     if (params.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (c) =>
-          (c.descricao && c.descricao.toLowerCase().includes(q)) ||
-          (c.nome && c.nome.toLowerCase().includes(q)) ||
-          (c.curso && c.curso.toLowerCase().includes(q)) ||
-          (c.forma && c.forma.toLowerCase().includes(q))
-      );
+      const normalize = (str: string = '') =>
+        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const q = normalize(params.search);
+      const cleanDigits = params.search.replace(/[^\d]/g, '');
+
+      list = list.filter((c) => {
+        const aluno = c.idaluno ? this.memDb.tb_alunos.find((a) => a.ID_aluno === c.idaluno) : null;
+        const nomeAluno = normalize(aluno?.nome_aluno || '');
+        const cpfAluno = (aluno?.cpf || '').replace(/[^\d]/g, '');
+        const desc = normalize(c.descricao || '');
+        const nomeLanc = normalize(c.nome || '');
+        const curso = normalize(c.curso || '');
+        const forma = normalize(c.forma || '');
+
+        return (
+          desc.includes(q) ||
+          nomeLanc.includes(q) ||
+          nomeAluno.includes(q) ||
+          curso.includes(q) ||
+          forma.includes(q) ||
+          (cleanDigits.length >= 3 && cpfAluno.includes(cleanDigits)) ||
+          String(c.ID_caixa).includes(q) ||
+          (c.idaluno && String(c.idaluno).includes(q))
+        );
+      });
     }
 
     // Ordenação decrescente de data

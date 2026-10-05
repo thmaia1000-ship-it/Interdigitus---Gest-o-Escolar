@@ -26,6 +26,31 @@ import {
 } from 'lucide-react';
 import { FechamentoCaixaModal } from '../components/FechamentoCaixaModal.js';
 
+// Utilitário para busca sem acentos e minúsculo
+const normalizeSearch = (str: string = '') =>
+  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+// Realce visual das letras digitadas pelo operador
+const highlightMatch = (text: string = '', query: string = '') => {
+  if (!query.trim() || !text) return <>{text}</>;
+  const qNorm = normalizeSearch(query);
+  const textNorm = normalizeSearch(text);
+  const idx = textNorm.indexOf(qNorm);
+  if (idx === -1) return <>{text}</>;
+  const start = text.slice(0, idx);
+  const match = text.slice(idx, idx + query.trim().length);
+  const end = text.slice(idx + query.trim().length);
+  return (
+    <>
+      {start}
+      <mark className="bg-amber-200 text-amber-950 font-bold px-0.5 rounded">
+        {match}
+      </mark>
+      {end}
+    </>
+  );
+};
+
 interface CaixaViewProps {
   isExclusiveMode?: boolean;
   onExitExclusive?: () => void;
@@ -40,6 +65,10 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   const [movimentos, setMovimentos] = useState<Caixa[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Busca e Autocomplete de Alunos no Lançamento Avulso
+  const [alunoAvulsoBusca, setAlunoAvulsoBusca] = useState('');
+  const [showAlunosDropdown, setShowAlunosDropdown] = useState(false);
 
   // Modal Fechamento de Caixa do Operador
   const [isFechamentoOpen, setIsFechamentoOpen] = useState(false);
@@ -87,22 +116,58 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
 
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  // Lista filtrada na Pesquisa Avançada por Nome
+  // Lista de Alunos filtrados letra por letra no Lançamento Avulso
+  const filteredAlunosAvulso = alunos
+    .filter((a) => {
+      if (!alunoAvulsoBusca.trim()) return true;
+      const term = normalizeSearch(alunoAvulsoBusca);
+      const cleanDigits = alunoAvulsoBusca.replace(/[^\d]/g, '');
+      const cleanCpf = (a.cpf || '').replace(/[^\d]/g, '');
+      const nomeNorm = normalizeSearch(a.nome_aluno);
+      return (
+        nomeNorm.includes(term) ||
+        (cleanDigits && cleanCpf.includes(cleanDigits)) ||
+        String(a.ID_aluno).includes(term)
+      );
+    })
+    .slice(0, 10);
+
+  // Lista de Alunos filtrados letra por letra no Receber Mensalidade
   const filteredMensalidadesModal = mensalidades.filter((m) => {
     if (filtroApenasComSaldo && (m.saldo_devedor || 0) <= 0) return false;
     if (!alunoSearchTerm.trim()) return true;
 
-    const term = alunoSearchTerm.toLowerCase().trim();
+    const term = normalizeSearch(alunoSearchTerm);
     const cleanDigits = alunoSearchTerm.replace(/[^\d]/g, '');
     const cleanCpf = (m.cpf_aluno || '').replace(/[^\d]/g, '');
+    const nomeAlunoNorm = normalizeSearch(m.nome_aluno || '');
+    const cursoNorm = normalizeSearch(m.curso || '');
 
     return (
-      (m.nome_aluno && m.nome_aluno.toLowerCase().includes(term)) ||
-      (cleanDigits && cleanCpf.includes(cleanDigits)) ||
-      (m.curso && m.curso.toLowerCase().includes(term)) ||
+      nomeAlunoNorm.includes(term) ||
+      (cleanDigits.length >= 2 && cleanCpf.includes(cleanDigits)) ||
+      cursoNorm.includes(term) ||
       String(m.ID_mensalidade).includes(term)
     );
   });
+
+  // Ao digitar cada letra no nome do aluno, pré-selecionar o primeiro aluno encontrado
+  useEffect(() => {
+    if (alunoSearchTerm.trim() && filteredMensalidadesModal.length > 0) {
+      const isAlreadyInList = filteredMensalidadesModal.some(
+        (m) => m.ID_mensalidade === selectedPlano?.ID_mensalidade
+      );
+      if (!isAlreadyInList) {
+        const first = filteredMensalidadesModal[0];
+        setSelectedPlano(first);
+        setRecebimentoData((prev) => ({
+          ...prev,
+          valor_pago: Math.min(first.valor_parcela || 0, first.saldo_devedor || 0),
+          observacao: `Recebimento Mensalidade Aluno: ${first.nome_aluno} (${first.curso})`,
+        }));
+      }
+    }
+  }, [alunoSearchTerm, filtroApenasComSaldo]);
 
   const loadData = async () => {
     setLoading(true);
@@ -136,6 +201,15 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   useEffect(() => {
     loadData();
   }, [page, tipo, forma, dataInicio, dataFim]);
+
+  // Busca instantânea ao digitar cada letra na barra de busca principal do Caixa
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      loadData();
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,6 +285,8 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
       idaluno: null,
       justificativa: 'Lançamento manual avulso no balcão',
     });
+    setAlunoAvulsoBusca('');
+    setShowAlunosDropdown(false);
     setMsg(null);
     setIsModalOpen(true);
   };
@@ -357,15 +433,28 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
 
       {/* Filtros */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-3">
-        <form onSubmit={handleSearch} className="relative w-full md:w-72">
+        <form onSubmit={handleSearch} className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por descrição ou nome..."
+            placeholder="Buscar por nome do aluno, descrição ou CPF..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+            className="w-full pl-9 pr-8 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-slate-50 hover:bg-white focus:bg-white transition-colors"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setPage(1);
+              }}
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5"
+              title="Limpar busca"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </form>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -472,11 +561,11 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                     <div className="text-[10px] text-slate-500 font-mono mt-0.5">{c.forma}</div>
                   </td>
                   <td className="px-4 py-3 max-w-xs truncate">
-                    <div className="font-semibold text-slate-900">{c.descricao || 'Sem descrição'}</div>
-                    {c.curso && <div className="text-[10px] text-indigo-600">{c.curso}</div>}
+                    <div className="font-semibold text-slate-900">{highlightMatch(c.descricao || 'Sem descrição', search)}</div>
+                    {c.curso && <div className="text-[10px] text-indigo-600">{highlightMatch(c.curso, search)}</div>}
                   </td>
                   <td className="px-4 py-3">
-                    <div>{c.nome || 'Não vinculado'}</div>
+                    <div className="font-medium text-slate-900">{highlightMatch(c.nome || 'Não vinculado', search)}</div>
                     {c.idaluno && <div className="text-[10px] text-slate-400 font-mono">ID Aluno #{c.idaluno}</div>}
                   </td>
                   <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{c.usuario || 'Sistema'}</td>
@@ -591,27 +680,89 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Aluno Vinculado (Opcional)</label>
-                <select
-                  value={formData.idaluno || ''}
-                  onChange={(e) => {
-                    const id = e.target.value ? Number(e.target.value) : null;
-                    const al = alunos.find((a) => a.ID_aluno === id);
-                    setFormData({
-                      ...formData,
-                      idaluno: id,
-                      nome: al ? al.nome_aluno : formData.nome,
-                    });
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
-                >
-                  <option value="">Lançamento avulso / Não vincular a aluno</option>
-                  {alunos.map((a) => (
-                    <option key={a.ID_aluno} value={a.ID_aluno}>
-                      {a.nome_aluno} (ID #{a.ID_aluno})
-                    </option>
-                  ))}
-                </select>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Buscar Aluno por Nome (Filtrado letra por letra)
+                </label>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do aluno letra por letra..."
+                    value={alunoAvulsoBusca}
+                    onChange={(e) => {
+                      setAlunoAvulsoBusca(e.target.value);
+                      setShowAlunosDropdown(true);
+                    }}
+                    onFocus={() => setShowAlunosDropdown(true)}
+                    className="w-full pl-8 pr-8 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                  {alunoAvulsoBusca && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAlunoAvulsoBusca('');
+                        setFormData({ ...formData, idaluno: null, nome: '' });
+                      }}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {showAlunosDropdown && alunoAvulsoBusca.trim() && (
+                  <div className="mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-36 overflow-y-auto divide-y divide-slate-100 z-10 relative">
+                    {filteredAlunosAvulso.length === 0 ? (
+                      <div className="p-2 text-slate-400 text-center text-[11px]">Nenhum aluno encontrado</div>
+                    ) : (
+                      filteredAlunosAvulso.map((a) => (
+                        <div
+                          key={a.ID_aluno}
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              idaluno: a.ID_aluno,
+                              nome: a.nome_aluno,
+                            });
+                            setAlunoAvulsoBusca(a.nome_aluno);
+                            setShowAlunosDropdown(false);
+                          }}
+                          className="p-2 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition-colors"
+                        >
+                          <div>
+                            <div className="font-semibold text-slate-900">
+                              {highlightMatch(a.nome_aluno, alunoAvulsoBusca)}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              CPF: {a.cpf || '-'} · ID #{a.ID_aluno}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                            Selecionar
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {formData.idaluno && (
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    <span>
+                      Aluno vinculado: <strong>{formData.nome}</strong> (ID #{formData.idaluno})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, idaluno: null, nome: '' });
+                        setAlunoAvulsoBusca('');
+                      }}
+                      className="text-rose-600 hover:text-rose-800 font-bold text-[10px]"
+                    >
+                      Desvincular
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -704,27 +855,40 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                   <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Digite o nome do aluno, CPF ou curso..."
+                    autoFocus
+                    placeholder="Digite o nome do aluno letra por letra (ex: Maria, João)..."
                     value={alunoSearchTerm}
                     onChange={(e) => setAlunoSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
                   {alunoSearchTerm && (
                     <button
                       type="button"
                       onClick={() => setAlunoSearchTerm('')}
-                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5"
+                      title="Limpar filtro"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
+                {alunoSearchTerm && (
+                  <div className="flex items-center justify-between text-[11px] text-emerald-800 font-medium px-1">
+                    <span>
+                      Buscando: <strong>"{alunoSearchTerm}"</strong>
+                    </span>
+                    <span className="font-mono bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">
+                      {filteredMensalidadesModal.length} aluno(s) encontrado(s)
+                    </span>
+                  </div>
+                )}
+
                 {/* Lista de Alunos Encontrados */}
-                <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 pt-1">
+                <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1 pt-1">
                   {filteredMensalidadesModal.length === 0 ? (
                     <div className="p-3 text-center text-slate-400 bg-white rounded-lg border border-dashed border-slate-200">
-                      Nenhum aluno encontrado para o filtro digitado.
+                      Nenhum aluno encontrado para "{alunoSearchTerm}".
                     </div>
                   ) : (
                     filteredMensalidadesModal.map((m) => {
@@ -749,13 +913,13 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                             </div>
                             <div className="min-w-0">
                               <div className="font-bold text-slate-900 truncate flex items-center gap-1.5">
-                                <span>{m.nome_aluno}</span>
+                                <span>{highlightMatch(m.nome_aluno, alunoSearchTerm)}</span>
                                 <span className="text-[10px] font-mono text-slate-400 font-normal">
-                                  CPF: {m.cpf_aluno || '-'}
+                                  CPF: {highlightMatch(m.cpf_aluno || '-', alunoSearchTerm)}
                                 </span>
                               </div>
                               <div className="text-[11px] text-slate-500 truncate">
-                                {m.curso} · Parc. {m.parcelas_pagas || 0}/{m.n_parcelas} · R${' '}
+                                {highlightMatch(m.curso, alunoSearchTerm)} · Parc. {m.parcelas_pagas || 0}/{m.n_parcelas} · R${' '}
                                 {(m.valor_parcela || 0).toFixed(2)}/mês
                               </div>
                             </div>
