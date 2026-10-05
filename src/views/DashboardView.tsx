@@ -89,15 +89,23 @@ export const DashboardView: React.FC<{ onNavigate: (path: string) => void }> = (
           >
             Novo Aluno
           </button>
+          <button
+            onClick={() => onNavigate('/financeiro/caixa')}
+            className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
+            title="Abrir o Livro Caixa na mesma aba"
+          >
+            <Receipt className="w-3.5 h-3.5 text-slate-600" />
+            <span>Ver Livro Caixa</span>
+          </button>
           <a
-            href="/financeiro/caixa?exclusive=true"
+            href="/financeiro/receber-mensalidade"
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px] shadow-2xs"
-            title="Abrir o Caixa em uma nova aba exclusiva para esta atividade"
+            title="Abrir Terminal de Recebimento de Mensalidades em uma nova aba dedicada"
           >
             <Receipt className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Frente de Caixa (Nova Aba)</span>
+            <span>Receber Mensalidade (Nova Aba)</span>
             <ExternalLink className="w-3 h-3 text-emerald-600" />
           </a>
         </div>

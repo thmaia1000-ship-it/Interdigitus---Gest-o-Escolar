@@ -218,31 +218,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 Mensalidades Escolares
               </button>
-              <div className="flex items-center justify-between group rounded-md hover:bg-slate-800/40">
-                <button
-                  onClick={() => handleNavigate('/financeiro/caixa')}
-                  className={`flex-1 text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center justify-between ${
-                    isCurrent('/financeiro/caixa')
-                      ? 'text-white font-semibold bg-slate-800'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>Livro Caixa</span>
-                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/50">
-                    Exclusivo
+              <button
+                onClick={() => handleNavigate('/financeiro/caixa')}
+                className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${
+                  isCurrent('/financeiro/caixa')
+                    ? 'text-white font-semibold bg-slate-800'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                }`}
+              >
+                Livro Caixa
+              </button>
+              <a
+                href="/financeiro/receber-mensalidade"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center justify-between text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 group"
+                title="Abrir Terminal de Recebimento de Mensalidades em uma nova aba dedicada"
+              >
+                <span className="flex items-center gap-1.5 font-medium text-xs">
+                  <span>Receber Mensalidade</span>
+                  <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800/70 px-1 rounded font-mono">
+                    Nova Aba
                   </span>
-                </button>
-                <a
-                  href="/financeiro/caixa?exclusive=true"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 text-slate-400 hover:text-emerald-400 rounded-md transition-colors"
-                  title="Abrir Caixa em Nova Aba Exclusiva (Terminal do Operador)"
-                  aria-label="Abrir Caixa em Nova Aba Exclusiva"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+              </a>
               <button
                 onClick={() => handleNavigate('/financeiro/despesas')}
                 className={`w-full text-left px-2.5 py-2 rounded-md transition-colors min-h-[40px] flex items-center ${

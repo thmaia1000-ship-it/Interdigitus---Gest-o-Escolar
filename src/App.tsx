@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { Header } from './components/layout/Header.js';
 import { Sidebar } from './components/layout/Sidebar.js';
 import { MobileBottomNav } from './components/layout/MobileBottomNav.js';
-import { CaixaExclusivoHeader } from './components/layout/CaixaExclusivoHeader.js';
 
 // Views
 import { LoginView } from './views/LoginView.js';
@@ -22,6 +21,7 @@ import { TurmasView } from './views/TurmasView.js';
 import { NotasView } from './views/NotasView.js';
 import { MensalidadesView } from './views/MensalidadesView.js';
 import { CaixaView } from './views/CaixaView.js';
+import { ReceberMensalidadeView } from './views/ReceberMensalidadeView.js';
 import { AuditoriaCaixaView } from './views/AuditoriaCaixaView.js';
 import { DespesasView } from './views/DespesasView.js';
 import { ProfessoresView } from './views/ProfessoresView.js';
@@ -43,23 +43,14 @@ function MainApp() {
     if (typeof window !== 'undefined') {
       const pathname = window.location.pathname;
       const params = new URLSearchParams(window.location.search);
-      if (params.get('exclusive') === 'true' || pathname === '/financeiro/caixa' || pathname === '/caixa') {
-        return '/financeiro/caixa';
+      if (pathname === '/financeiro/receber-mensalidade' || params.get('modulo') === 'receber-mensalidade') {
+        return '/financeiro/receber-mensalidade';
       }
       if (pathname && pathname !== '/') {
         return pathname;
       }
     }
     return '/';
-  });
-
-  const [isCaixaExclusive, setIsCaixaExclusive] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const pathname = window.location.pathname;
-      return params.get('exclusive') === 'true' || pathname === '/financeiro/caixa' || pathname === '/caixa';
-    }
-    return false;
   });
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
@@ -97,6 +88,7 @@ function MainApp() {
     '/academico/notas': ['Administrador', 'Secretaria', 'Coordenação'],
     '/financeiro/mensalidades': ['Administrador', 'Financeiro', 'Secretaria'],
     '/financeiro/caixa': ['Administrador', 'Financeiro'],
+    '/financeiro/receber-mensalidade': ['Administrador', 'Financeiro', 'Secretaria'],
     '/financeiro/despesas': ['Administrador', 'Financeiro'],
     '/financeiro/pagamentos-professores': ['Administrador', 'Financeiro'],
     '/financeiro/pagamentos-parciais': ['Administrador', 'Financeiro'],
@@ -156,10 +148,16 @@ function MainApp() {
       case '/financeiro/mensalidades':
         return <MensalidadesView />;
       case '/financeiro/caixa':
+        return <CaixaView />;
+      case '/financeiro/receber-mensalidade':
         return (
-          <CaixaView
-            isExclusiveMode={false}
-            onEnterExclusive={() => setIsCaixaExclusive(true)}
+          <ReceberMensalidadeView
+            onClose={() => {
+              setCurrentPath('/financeiro/caixa');
+              if (typeof window !== 'undefined' && window.history.pushState) {
+                window.history.pushState({}, '', '/financeiro/caixa');
+              }
+            }}
           />
         );
       case '/financeiro/despesas':
@@ -189,32 +187,17 @@ function MainApp() {
     }
   };
 
-  // Se estiver no Modo Exclusivo de Frente de Caixa (nova aba ou tela dedicada)
-  if (isCaixaExclusive && currentPath === '/financeiro/caixa') {
+  // Se for o Terminal Dedicado de Recebimento de Mensalidades (aberto em nova aba)
+  if (currentPath === '/financeiro/receber-mensalidade') {
     return (
-      <div className="h-screen bg-slate-50 overflow-hidden flex flex-col font-sans select-none">
-        <CaixaExclusivoHeader
-          onExit={() => {
-            setIsCaixaExclusive(false);
-            setCurrentPath('/');
-            if (typeof window !== 'undefined' && window.history.pushState) {
-              window.history.pushState({}, '', '/');
-            }
-          }}
-        />
-        <main className="flex-1 overflow-y-auto">
-          <CaixaView
-            isExclusiveMode={true}
-            onExitExclusive={() => {
-              setIsCaixaExclusive(false);
-              setCurrentPath('/');
-              if (typeof window !== 'undefined' && window.history.pushState) {
-                window.history.pushState({}, '', '/');
-              }
-            }}
-          />
-        </main>
-      </div>
+      <ReceberMensalidadeView
+        onClose={() => {
+          setCurrentPath('/financeiro/caixa');
+          if (typeof window !== 'undefined' && window.history.pushState) {
+            window.history.pushState({}, '', '/financeiro/caixa');
+          }
+        }}
+      />
     );
   }
 

@@ -321,28 +321,6 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!isExclusiveMode && (
-            <a
-              href="/financeiro/caixa?exclusive=true"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs min-h-[40px]"
-              title="Abrir o Caixa em uma nova aba dedicada e exclusiva para esta atividade"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-indigo-700" />
-              <span>Abrir em Nova Aba Exclusiva</span>
-            </a>
-          )}
-          {!isExclusiveMode && onEnterExclusive && (
-            <button
-              onClick={onEnterExclusive}
-              className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 min-h-[40px] shadow-2xs"
-              title="Fixar a tela atual como Terminal Exclusivo de Frente de Caixa"
-            >
-              <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
-              <span>Modo Exclusivo</span>
-            </button>
-          )}
           <a
             href="/api/export/csv/caixa"
             download
@@ -366,28 +344,19 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
             <Printer className="w-4 h-4 text-indigo-600" />
             <span>Fechamento do Caixa</span>
           </button>
-          <button
-            onClick={handleOpenReceberMensalidade}
-            className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[40px]"
+          <a
+            href="/financeiro/receber-mensalidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto px-4 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[40px]"
+            title="Abrir Terminal de Recebimento de Mensalidades em uma nova aba dedicada"
           >
             <Receipt className="w-4 h-4" />
-            <span>Receber Mensalidade do Aluno</span>
-          </button>
+            <span>Receber Mensalidade (Nova Aba)</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
       </div>
-
-      {/* Faixa de Notificação / Modo Exclusivo de Frente de Caixa */}
-      {isExclusiveMode && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-900 font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
-            <span>Terminal Operacional Exclusivo para Movimentações do Caixa</span>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-emerald-700 font-medium">
-            <span>Todas as funções acadêmicas e de navegação foram recolhidas para foco exclusivo no caixa.</span>
-          </div>
-        </div>
-      )}
 
       {msg && (
         <div
