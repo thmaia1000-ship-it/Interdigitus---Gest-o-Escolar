@@ -530,6 +530,16 @@ apiRouter.get('/mensalidades/alunos-completo', requireAuth, requireRole('Finance
   }
 });
 
+// Quadro de detalhes das mensalidades de um aluno (Pagas, Atrasadas e A Vencer)
+apiRouter.get('/mensalidades/detalhe-aluno/:idaluno', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
+  try {
+    const data = db.getMensalidadesDetalheAluno(Number(req.params.idaluno));
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/mensalidades/rapido', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
   try {
     const operator = (req as any).user.username;
@@ -550,7 +560,7 @@ apiRouter.post('/mensalidades', requireAuth, requireRole('Financeiro', 'Secretar
   }
 });
 
-apiRouter.post('/mensalidades/pagamento', requireAuth, requireRole('Financeiro'), (req, res) => {
+apiRouter.post('/mensalidades/pagamento', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
   try {
     const operator = (req as any).user.username;
     const result = db.registrarPagamentoMensalidade({

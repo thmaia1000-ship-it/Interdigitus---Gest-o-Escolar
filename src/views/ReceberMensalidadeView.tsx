@@ -24,6 +24,9 @@ import {
   Layers,
   GraduationCap,
   PlusCircle,
+  RefreshCw,
+  Split,
+  ChevronRight,
 } from 'lucide-react';
 
 // Normalização ultra-segura para busca sem acentos e minúsculo (suporta números, strings e null)
@@ -145,6 +148,16 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [ultimoComprovante, setUltimoComprovante] = useState<any | null>(null);
 
+  // Quadro de Mensalidades do Aluno (Pagas, Atrasadas e A Vencer)
+  const [detalheAluno, setDetalheAluno] = useState<any | null>(null);
+  const [loadingDetalhe, setLoadingDetalhe] = useState(false);
+  const [quadroFilter, setQuadroFilter] = useState<'TODAS' | 'ATRASADAS' | 'AVENCER' | 'PAGAS'>('TODAS');
+
+  // Opção de Receber em 2 Formas (Pagamento Misto)
+  const [emDuasFormas, setEmDuasFormas] = useState(false);
+  const [forma2, setForma2] = useState('Dinheiro');
+  const [valor2, setValor2] = useState<number>(0);
+
   // Foco automático no input de busca ao carregar
   useEffect(() => {
     searchInputRef.current?.focus();
@@ -196,8 +209,48 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     loadData();
   }, []);
 
+  const loadDetalheAluno = async (idaluno: number) => {
+    if (!idaluno) {
+      setDetalheAluno(null);
+      return;
+    }
+    setLoadingDetalhe(true);
+    try {
+      const data = await api.getMensalidadesDetalheAluno(idaluno);
+      setDetalheAluno(data);
+    } catch (err) {
+      console.warn('Erro ao carregar detalhes das mensalidades do aluno:', err);
+    } finally {
+      setLoadingDetalhe(false);
+    }
+  };
+
+  const handleToggleDuasFormas = (checked: boolean) => {
+    setEmDuasFormas(checked);
+    if (checked) {
+      const totalAtual = Number(recebimentoData.valor_pago) || Number(selectedPlano?.valor_parcela) || 0;
+      const v1 = Number((totalAtual / 2).toFixed(2));
+      const v2 = Number((totalAtual - v1).toFixed(2));
+      setRecebimentoData((prev) => ({ ...prev, valor_pago: v1 }));
+      setValor2(v2);
+
+      // Garantir formas diferentes por padrão
+      if (recebimentoData.forma_pagamento === forma2) {
+        setForma2(recebimentoData.forma_pagamento === 'PIX' ? 'Dinheiro' : 'PIX');
+      }
+    } else {
+      const totalRecomposto = Number((recebimentoData.valor_pago + valor2).toFixed(2));
+      setRecebimentoData((prev) => ({ ...prev, valor_pago: totalRecomposto }));
+      setValor2(0);
+    }
+  };
+
   const selectPlano = (item: any) => {
     setSelectedPlano(item);
+    setEmDuasFormas(false);
+    setValor2(0);
+    loadDetalheAluno(item.idaluno);
+
     if (item.tem_contrato) {
       setRecebimentoData((prev) => ({
         ...prev,
@@ -292,9 +345,26 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   const handleConfirmarRecebimento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlano || !selectedPlano.tem_contrato) return;
-    const valorNum = Number(recebimentoData.valor_pago);
-    if (valorNum <= 0) {
+    
+    const valor1 = Number(recebimentoData.valor_pago) || 0;
+    const v2 = emDuasFormas ? (Number(valor2) || 0) : 0;
+    const totalNum = Number((valor1 + v2).toFixed(2));
+
+    if (totalNum <= 0) {
       setMsg({ type: 'err', text: 'Informe um valor válido maior que zero.' });
+      return;
+    }
+
+    if (emDuasFormas && v2 <= 0) {
+      setMsg({ type: 'err', text: 'Na opção em 2 formas, informe o valor da segunda forma de pagamento.' });
+      return;
+    }
+
+    if (totalNum > (selectedPlano.saldo_devedor + 0.05)) {
+      setMsg({
+        type: 'err',
+        text: `O total pago (${formatMoney(totalNum)}) excede o saldo devedor de ${formatMoney(selectedPlano.saldo_devedor)}.`,
+      });
       return;
     }
 
@@ -303,11 +373,18 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     try {
       const res = await api.registrarPagamentoMensalidade({
         idmensalidade: selectedPlano.ID_mensalidade,
-        valor_pago: valorNum,
+        valor_pago: valor1,
         forma_pagamento: recebimentoData.forma_pagamento,
         gerar_caixa: recebimentoData.gerar_caixa,
         observacao: recebimentoData.observacao,
+        em_duas_formas: emDuasFormas,
+        forma_pagamento_2: emDuasFormas ? forma2 : undefined,
+        valor_pago_2: emDuasFormas ? v2 : undefined,
       });
+
+      const formaDesc = emDuasFormas
+        ? `${recebimentoData.forma_pagamento} (${formatMoney(valor1)}) + ${forma2} (${formatMoney(v2)})`
+        : recebimentoData.forma_pagamento;
 
       const comprovanteInfo = {
         data: new Date().toLocaleDateString('pt-BR'),
@@ -316,22 +393,28 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
         aluno: selectedPlano.nome_aluno,
         cpf: selectedPlano.cpf_aluno,
         curso: selectedPlano.curso,
-        valor_pago: valorNum,
-        forma: recebimentoData.forma_pagamento,
+        valor_pago: totalNum,
+        forma: formaDesc,
         parcela: (parseInt(selectedPlano.parcelas_pagas || '0', 10) + 1) + '/' + selectedPlano.n_parcelas,
-        saldo_restante: Math.max(0, (selectedPlano.saldo_devedor || 0) - valorNum),
+        saldo_restante: Math.max(0, (selectedPlano.saldo_devedor || 0) - totalNum),
         id_mensalidade: selectedPlano.ID_mensalidade,
         id_caixa: res.caixa?.ID_caixa,
+        em_duas_formas: emDuasFormas,
+        forma_1: recebimentoData.forma_pagamento,
+        valor_1: valor1,
+        forma_2: forma2,
+        valor_2: v2,
       };
 
       setUltimoComprovante(comprovanteInfo);
       setMsg({
         type: 'ok',
-        text: `Recebimento de ${formatMoney(valorNum)} do aluno(a) ${selectedPlano.nome_aluno} quitado com sucesso!`,
+        text: `Recebimento de ${formatMoney(totalNum)} [${formaDesc}] do aluno(a) ${selectedPlano.nome_aluno} quitado com sucesso!`,
       });
 
-      // Recarregar dados
+      // Recarregar dados da lista e do quadro do aluno
       await loadData();
+      await loadDetalheAluno(selectedPlano.idaluno);
       searchInputRef.current?.focus();
     } catch (err: any) {
       setMsg({ type: 'err', text: err.message || 'Falha ao processar quitação.' });
@@ -375,6 +458,45 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     { id: 'Cartão Crédito', label: 'Crédito', icon: CreditCard },
     { id: 'Boleto', label: 'Boleto', icon: FileText },
   ];
+
+  // Parcelas do aluno filtradas para o Quadro de Mensalidades
+  const parcelasFiltradasQuadro = useMemo(() => {
+    if (!detalheAluno || !detalheAluno.parcelas || detalheAluno.parcelas.length === 0) {
+      if (!selectedPlano || !selectedPlano.tem_contrato) return [];
+      const nParc = parseInt(selectedPlano.n_parcelas || '1', 10);
+      const pagas = parseInt(selectedPlano.parcelas_pagas || '0', 10);
+      const val = Number(selectedPlano.valor_parcela) || 0;
+      const today = new Date().toISOString().split('T')[0];
+      const list: any[] = [];
+      for (let i = 1; i <= nParc; i++) {
+        const isPaga = i <= pagas;
+        const isVencida = !isPaga && (selectedPlano.data_pagar && selectedPlano.data_pagar < today);
+        list.push({
+          numero: i,
+          contratoId: selectedPlano.ID_mensalidade,
+          curso: selectedPlano.curso,
+          valor: val,
+          data_vencimento: selectedPlano.data_pagar || today,
+          status: isPaga ? 'PAGA' : (isVencida ? 'ATRASADA' : 'AVENCER'),
+          status_label: isPaga ? 'Paga / Quitada' : (isVencida ? 'Atrasada' : 'A Vencer'),
+          dias_atraso: isVencida ? (selectedPlano.dias_atraso || 1) : 0,
+          paga: isPaga,
+        });
+      }
+      return list;
+    }
+
+    if (quadroFilter === 'ATRASADAS') {
+      return detalheAluno.parcelas.filter((p: any) => p.status === 'ATRASADA');
+    }
+    if (quadroFilter === 'AVENCER') {
+      return detalheAluno.parcelas.filter((p: any) => p.status === 'AVENCER');
+    }
+    if (quadroFilter === 'PAGAS') {
+      return detalheAluno.parcelas.filter((p: any) => p.status === 'PAGA');
+    }
+    return detalheAluno.parcelas;
+  }, [detalheAluno, selectedPlano, quadroFilter]);
 
   return (
     <div className="h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
@@ -786,108 +908,583 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Seletor Rápido de Forma de Pagamento */}
-                  <div className="pt-4">
-                    <label className="block text-xs font-bold text-slate-300 mb-2">
-                      Forma de Pagamento no Caixa *
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {formasPagamento.map((f) => {
-                        const Icon = f.icon;
-                        const isChosen = recebimentoData.forma_pagamento === f.id;
-                        return (
-                          <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => setRecebimentoData({ ...recebimentoData, forma_pagamento: f.id })}
-                            className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                              isChosen
-                                ? 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-950 font-bold scale-[1.02]'
-                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span className="text-xs">{f.label}</span>
-                          </button>
-                        );
-                      })}
+                {/* QUADRO DE MENSALIDADES DO ALUNO (PAGAS, ATRASADAS E A VENCER) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400">
+                        <Receipt className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          Quadro Financeiro do Aluno
+                          {loadingDetalhe && (
+                            <RefreshCw className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                          )}
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Situação das parcelas pagas, atrasadas e a vencer
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Abas do Quadro */}
+                    <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setQuadroFilter('TODAS')}
+                        className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                          quadroFilter === 'TODAS'
+                            ? 'bg-slate-800 text-white shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        Todas ({detalheAluno?.parcelas?.length || selectedPlano.n_parcelas})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuadroFilter('ATRASADAS')}
+                        className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                          quadroFilter === 'ATRASADAS'
+                            ? 'bg-rose-950 text-rose-200 border border-rose-800 shadow-xs'
+                            : 'text-rose-400/80 hover:text-rose-300'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        Atrasadas ({detalheAluno?.resumo?.total_atrasadas_qtd ?? (selectedPlano.status_parcela === 'VENCIDA' ? 1 : 0)})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuadroFilter('AVENCER')}
+                        className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                          quadroFilter === 'AVENCER'
+                            ? 'bg-amber-950 text-amber-200 border border-amber-800 shadow-xs'
+                            : 'text-amber-400/80 hover:text-amber-300'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        A Vencer ({detalheAluno?.resumo?.total_avencer_qtd ?? Math.max(0, (selectedPlano.n_parcelas - (selectedPlano.parcelas_pagas || 0) - (selectedPlano.status_parcela === 'VENCIDA' ? 1 : 0)))})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuadroFilter('PAGAS')}
+                        className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                          quadroFilter === 'PAGAS'
+                            ? 'bg-emerald-950 text-emerald-200 border border-emerald-800 shadow-xs'
+                            : 'text-emerald-400/80 hover:text-emerald-300'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Pagas ({detalheAluno?.resumo?.total_pagas_qtd ?? selectedPlano.parcelas_pagas ?? 0})
+                      </button>
                     </div>
                   </div>
 
-                  {/* Campos do Valor e Observação */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Valor a Receber (R$) *
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-slate-500 font-mono font-bold text-sm">
-                          R$
+                  {/* Resumo em 3 Métricas Visuais */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {/* Pagas */}
+                    <div
+                      onClick={() => setQuadroFilter(quadroFilter === 'PAGAS' ? 'TODAS' : 'PAGAS')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        quadroFilter === 'PAGAS'
+                          ? 'bg-emerald-950/90 border-emerald-500 shadow-md ring-1 ring-emerald-500/30'
+                          : 'bg-slate-950/80 border-slate-800 hover:border-emerald-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Pagas
                         </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          max={selectedPlano.saldo_devedor || undefined}
-                          required
-                          value={recebimentoData.valor_pago || ''}
-                          onChange={(e) =>
-                            setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
-                          }
-                          className="w-full pl-10 pr-3 py-2 text-base font-bold font-mono bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
+                        <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-950 px-1.5 py-0.2 rounded border border-emerald-800">
+                          {detalheAluno?.resumo?.total_pagas_qtd ?? selectedPlano.parcelas_pagas ?? 0}
+                        </span>
                       </div>
-                      <div className="flex gap-1.5 mt-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRecebimentoData({
-                              ...recebimentoData,
-                              valor_pago: Math.min(
-                                selectedPlano.valor_parcela || 0,
-                                selectedPlano.saldo_devedor || 0
-                              ),
-                            })
-                          }
-                          className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
-                        >
-                          1 Parcela ({formatMoney(selectedPlano.valor_parcela)})
-                        </button>
-                        {selectedPlano.saldo_devedor > 0 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setRecebimentoData({
-                                ...recebimentoData,
-                                valor_pago: selectedPlano.saldo_devedor || 0,
-                              })
-                            }
-                            className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
-                          >
-                            Quitar Total ({formatMoney(selectedPlano.saldo_devedor)})
-                          </button>
+                      <div className="text-sm sm:text-base font-bold font-mono text-emerald-300 mt-1">
+                        {formatMoney(
+                          detalheAluno?.resumo?.total_pagas_valor ??
+                            ((selectedPlano.parcelas_pagas || 0) * (selectedPlano.valor_parcela || 0))
                         )}
                       </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">parcelas quitadas</span>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Observação / Identificação do Recibo
-                      </label>
-                      <input
-                        type="text"
-                        value={recebimentoData.observacao}
-                        onChange={(e) =>
-                          setRecebimentoData({ ...recebimentoData, observacao: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
+                    {/* Atrasadas */}
+                    <div
+                      onClick={() => setQuadroFilter(quadroFilter === 'ATRASADAS' ? 'TODAS' : 'ATRASADAS')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        quadroFilter === 'ATRASADAS'
+                          ? 'bg-rose-950/90 border-rose-500 shadow-md ring-1 ring-rose-500/30'
+                          : 'bg-slate-950/80 border-slate-800 hover:border-rose-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          Atrasadas
+                        </span>
+                        <span className="text-xs font-mono font-bold text-rose-300 bg-rose-950 px-1.5 py-0.2 rounded border border-rose-800">
+                          {detalheAluno?.resumo?.total_atrasadas_qtd ?? (selectedPlano.status_parcela === 'VENCIDA' ? 1 : 0)}
+                        </span>
+                      </div>
+                      <div className="text-sm sm:text-base font-bold font-mono text-rose-400 mt-1">
+                        {formatMoney(
+                          detalheAluno?.resumo?.total_atrasadas_valor ??
+                            (selectedPlano.status_parcela === 'VENCIDA' ? selectedPlano.valor_parcela : 0)
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">vencidas no prazo</span>
+                    </div>
+
+                    {/* A Vencer */}
+                    <div
+                      onClick={() => setQuadroFilter(quadroFilter === 'AVENCER' ? 'TODAS' : 'AVENCER')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        quadroFilter === 'AVENCER'
+                          ? 'bg-amber-950/90 border-amber-500 shadow-md ring-1 ring-amber-500/30'
+                          : 'bg-slate-950/80 border-slate-800 hover:border-amber-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          A Vencer
+                        </span>
+                        <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950 px-1.5 py-0.2 rounded border border-amber-800">
+                          {detalheAluno?.resumo?.total_avencer_qtd ??
+                            Math.max(
+                              0,
+                              (selectedPlano.n_parcelas || 1) -
+                                (selectedPlano.parcelas_pagas || 0) -
+                                (selectedPlano.status_parcela === 'VENCIDA' ? 1 : 0)
+                            )}
+                        </span>
+                      </div>
+                      <div className="text-sm sm:text-base font-bold font-mono text-amber-400 mt-1">
+                        {formatMoney(
+                          detalheAluno?.resumo?.total_avencer_valor ??
+                            Math.max(
+                              0,
+                              (selectedPlano.saldo_devedor || 0) -
+                                (selectedPlano.status_parcela === 'VENCIDA' ? selectedPlano.valor_parcela : 0)
+                            )
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">futuras parcelas</span>
                     </div>
                   </div>
 
+                  {/* Lista de Parcelas com Rolagem */}
+                  <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/90">
+                    <div className="max-h-44 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60">
+                      {parcelasFiltradasQuadro.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-slate-500">
+                          Nenhuma parcela encontrada para o filtro selecionado.
+                        </div>
+                      ) : (
+                        parcelasFiltradasQuadro.map((p: any) => (
+                          <div
+                            key={`${p.contratoId}-${p.numero}`}
+                            className={`p-2.5 flex items-center justify-between gap-3 text-xs transition-colors ${
+                              p.status === 'ATRASADA'
+                                ? 'bg-rose-950/20 hover:bg-rose-950/40'
+                                : p.status === 'PAGA'
+                                ? 'bg-emerald-950/10 hover:bg-emerald-950/30'
+                                : 'hover:bg-slate-900/60'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold flex items-center justify-center text-slate-300 shrink-0">
+                                {p.numero}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-slate-200 truncate flex items-center gap-1.5">
+                                  <span>Parcela {p.numero}/{selectedPlano.n_parcelas}</span>
+                                  <span className="text-[10px] text-slate-500">· Venc. {p.data_vencimento}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                  {p.status === 'PAGA' && (
+                                    <span className="text-emerald-400 font-bold flex items-center gap-0.5">
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      Paga
+                                    </span>
+                                  )}
+                                  {p.status === 'ATRASADA' && (
+                                    <span className="text-rose-400 font-bold flex items-center gap-0.5">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      Atrasada ({p.dias_atraso}d em atraso)
+                                    </span>
+                                  )}
+                                  {p.status === 'AVENCER' && (
+                                    <span className="text-amber-400 font-medium">
+                                      A Vencer
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="font-mono font-bold text-white">
+                                {formatMoney(p.valor)}
+                              </span>
+
+                              {p.status !== 'PAGA' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRecebimentoData((prev) => ({
+                                      ...prev,
+                                      valor_pago: p.valor,
+                                      observacao: `Recebimento Parcela ${p.numero}/${selectedPlano.n_parcelas} - ${selectedPlano.nome_aluno}`,
+                                    }));
+                                    if (emDuasFormas) {
+                                      const v1 = Number((p.valor / 2).toFixed(2));
+                                      const v2 = Number((p.valor - v1).toFixed(2));
+                                      setRecebimentoData((prev) => ({ ...prev, valor_pago: v1 }));
+                                      setValor2(v2);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-md text-[10px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Carregar esta parcela para recebimento imediato"
+                                >
+                                  <span>Receber</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ÁREA DE RECEBIMENTO DO PAGAMENTO */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden space-y-4">
+                  {/* Cabeçalho da Quitação + Toggle para Receber em 2 Formas */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider font-bold">
+                        Estação de Caixa
+                      </span>
+                      <h4 className="text-base font-bold text-white mt-0.5">
+                        Registrar Recebimento de Mensalidade
+                      </h4>
+                    </div>
+
+                    {/* Toggle: Receber em 2 Formas */}
+                    <div className="flex items-center gap-2.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                      <Split className={`w-4 h-4 ${emDuasFormas ? 'text-indigo-400' : 'text-slate-500'}`} />
+                      <label className="text-xs font-bold text-slate-300 cursor-pointer flex items-center gap-2">
+                        <span>Receber em 2 Formas</span>
+                        <input
+                          type="checkbox"
+                          checked={emDuasFormas}
+                          onChange={(e) => handleToggleDuasFormas(e.target.checked)}
+                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-700 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Se NÃO estiver em 2 formas (Forma Única Tradicional) */}
+                  {!emDuasFormas ? (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-2">
+                          Forma de Pagamento no Caixa *
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                          {formasPagamento.map((f) => {
+                            const Icon = f.icon;
+                            const isChosen = recebimentoData.forma_pagamento === f.id;
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setRecebimentoData({ ...recebimentoData, forma_pagamento: f.id })}
+                                className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                  isChosen
+                                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-950 font-bold scale-[1.02]'
+                                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                                <span className="text-xs">{f.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Valor a Receber (R$) *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-2.5 text-slate-500 font-mono font-bold text-sm">
+                              R$
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              max={selectedPlano.saldo_devedor || undefined}
+                              required
+                              value={recebimentoData.valor_pago || ''}
+                              onChange={(e) =>
+                                setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
+                              }
+                              className="w-full pl-10 pr-3 py-2 text-base font-bold font-mono bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div className="flex gap-1.5 mt-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRecebimentoData({
+                                  ...recebimentoData,
+                                  valor_pago: Math.min(
+                                    selectedPlano.valor_parcela || 0,
+                                    selectedPlano.saldo_devedor || 0
+                                  ),
+                                })
+                              }
+                              className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium cursor-pointer"
+                            >
+                              1 Parcela ({formatMoney(selectedPlano.valor_parcela)})
+                            </button>
+                            {selectedPlano.saldo_devedor > 0 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRecebimentoData({
+                                    ...recebimentoData,
+                                    valor_pago: selectedPlano.saldo_devedor || 0,
+                                  })
+                                }
+                                className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium cursor-pointer"
+                              >
+                                Quitar Total ({formatMoney(selectedPlano.saldo_devedor)})
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Observação / Identificação do Recibo
+                          </label>
+                          <input
+                            type="text"
+                            value={recebimentoData.observacao}
+                            onChange={(e) =>
+                              setRecebimentoData({ ...recebimentoData, observacao: e.target.value })
+                            }
+                            className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* SE ESTIVER EM 2 FORMAS (PAGAMENTO MISTO) */
+                    <div className="space-y-4 pt-1">
+                      <div className="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-xs text-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Split className="w-4 h-4 text-indigo-400 shrink-0" />
+                          <span>
+                            <strong>Pagamento Dividido:</strong> Defina o valor pago na 1ª e na 2ª Forma.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const total = Math.min(selectedPlano.valor_parcela || 0, selectedPlano.saldo_devedor || 0);
+                              const half1 = Number((total / 2).toFixed(2));
+                              const half2 = Number((total - half1).toFixed(2));
+                              setRecebimentoData((prev) => ({ ...prev, valor_pago: half1 }));
+                              setValor2(half2);
+                            }}
+                            className="px-2 py-1 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 rounded text-[10px] font-bold cursor-pointer"
+                          >
+                            50% / 50% Parcela
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const totalAlvo = Number(selectedPlano.valor_parcela || selectedPlano.saldo_devedor || 0);
+                              const v1 = Number(recebimentoData.valor_pago) || 0;
+                              setValor2(Math.max(0, Number((totalAlvo - v1).toFixed(2))));
+                            }}
+                            className="px-2 py-1 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 rounded text-[10px] font-bold cursor-pointer"
+                          >
+                            Completar 1 Parcela
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bloco 1ª Forma */}
+                      <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-700 text-[10px] font-bold flex items-center justify-center text-emerald-300">
+                              1
+                            </span>
+                            1ª Forma de Pagamento
+                          </span>
+                          <span className="font-mono text-xs font-bold text-white">
+                            {formatMoney(Number(recebimentoData.valor_pago))}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                          {formasPagamento.map((f) => {
+                            const isChosen = recebimentoData.forma_pagamento === f.id;
+                            const Icon = f.icon;
+                            return (
+                              <button
+                                key={`f1-${f.id}`}
+                                type="button"
+                                onClick={() => setRecebimentoData({ ...recebimentoData, forma_pagamento: f.id })}
+                                className={`py-1.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                  isChosen
+                                    ? 'bg-emerald-600 border-emerald-500 text-white font-bold'
+                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                <span>{f.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="relative pt-1">
+                          <span className="absolute left-3 top-3.5 text-slate-500 font-mono font-bold text-xs">
+                            R$
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            required
+                            value={recebimentoData.valor_pago || ''}
+                            onChange={(e) =>
+                              setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
+                            }
+                            placeholder="Valor da 1ª Forma"
+                            className="w-full pl-9 pr-3 py-2 text-sm font-bold font-mono bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Bloco 2ª Forma */}
+                      <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-indigo-950 border border-indigo-700 text-[10px] font-bold flex items-center justify-center text-indigo-300">
+                              2
+                            </span>
+                            2ª Forma de Pagamento
+                          </span>
+                          <span className="font-mono text-xs font-bold text-white">
+                            {formatMoney(Number(valor2))}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                          {formasPagamento.map((f) => {
+                            const isChosen = forma2 === f.id;
+                            const Icon = f.icon;
+                            return (
+                              <button
+                                key={`f2-${f.id}`}
+                                type="button"
+                                onClick={() => setForma2(f.id)}
+                                className={`py-1.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                  isChosen
+                                    ? 'bg-indigo-600 border-indigo-500 text-white font-bold'
+                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                <span>{f.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="relative pt-1">
+                          <span className="absolute left-3 top-3.5 text-slate-500 font-mono font-bold text-xs">
+                            R$
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            required
+                            value={valor2 || ''}
+                            onChange={(e) => setValor2(Number(e.target.value))}
+                            placeholder="Valor da 2ª Forma"
+                            className="w-full pl-9 pr-3 py-2 text-sm font-bold font-mono bg-slate-900 border border-slate-700 rounded-xl text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Barra de Conferência da Soma das 2 Formas */}
+                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2">
+                          <span className="font-semibold">Soma Total:</span>
+                          <span className="font-mono font-bold text-white text-sm">
+                            {formatMoney(Number(recebimentoData.valor_pago) + Number(valor2))}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            ({recebimentoData.forma_pagamento}: {formatMoney(Number(recebimentoData.valor_pago))} + {forma2}: {formatMoney(Number(valor2))})
+                          </span>
+                        </div>
+
+                        <div>
+                          {(Number(recebimentoData.valor_pago) + Number(valor2)) > (selectedPlano.saldo_devedor + 0.05) ? (
+                            <span className="text-[11px] font-bold text-rose-400 bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
+                              Excede saldo devedor
+                            </span>
+                          ) : (Number(recebimentoData.valor_pago) + Number(valor2)) <= 0 ? (
+                            <span className="text-[11px] font-medium text-slate-500">
+                              Informe os valores
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Pronto para quitar
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Observação */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          Observação / Identificação do Recibo
+                        </label>
+                        <input
+                          type="text"
+                          value={recebimentoData.observacao}
+                          onChange={(e) =>
+                            setRecebimentoData({ ...recebimentoData, observacao: e.target.value })
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Opção Integrar no Livro Caixa */}
-                  <div className="pt-4 border-t border-slate-800 mt-4">
+                  <div className="pt-3 border-t border-slate-800">
                     <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-300">
                       <input
                         type="checkbox"
@@ -905,16 +1502,21 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                 </div>
 
                 {/* Botão de Quitação Principal */}
-                <div className="pt-2">
+                <div className="pt-1">
                   <button
                     type="submit"
-                    disabled={submitting || Number(recebimentoData.valor_pago) <= 0}
+                    disabled={
+                      submitting ||
+                      (Number(recebimentoData.valor_pago) + (emDuasFormas ? Number(valor2) : 0)) <= 0
+                    }
                     className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl transition-all shadow-lg shadow-emerald-950 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Check className="w-5 h-5" />
                     <span>
                       {submitting
                         ? 'Processando Quitação...'
+                        : emDuasFormas
+                        ? `Confirmar Recebimento de ${formatMoney(Number(recebimentoData.valor_pago) + Number(valor2))} em 2 Formas`
                         : `Confirmar Recebimento de ${formatMoney(Number(recebimentoData.valor_pago))} (Enter)`}
                     </span>
                   </button>

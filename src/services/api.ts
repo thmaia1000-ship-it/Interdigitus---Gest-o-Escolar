@@ -284,12 +284,42 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  getMensalidadesDetalheAluno: (idaluno: number) =>
+    request<{
+      aluno: { ID_aluno: number; nome_aluno: string; cpf?: string } | null;
+      contratos: any[];
+      resumo: {
+        total_pagas_qtd: number;
+        total_pagas_valor: number;
+        total_atrasadas_qtd: number;
+        total_atrasadas_valor: number;
+        total_avencer_qtd: number;
+        total_avencer_valor: number;
+        saldo_devedor_total: number;
+      };
+      parcelas: Array<{
+        numero: number;
+        contratoId: number;
+        curso: string;
+        valor: number;
+        data_vencimento: string;
+        status: 'PAGA' | 'ATRASADA' | 'AVENCER';
+        status_label: string;
+        dias_atraso: number;
+        paga: boolean;
+      }>;
+      historico_caixa: any[];
+    }>(`/mensalidades/detalhe-aluno/${idaluno}`),
+
   registrarPagamentoMensalidade: (payload: {
     idmensalidade: number;
     valor_pago: number;
     forma_pagamento: string;
     gerar_caixa: boolean;
     observacao?: string;
+    em_duas_formas?: boolean;
+    forma_pagamento_2?: string;
+    valor_pago_2?: number;
   }) =>
     request<any>('/mensalidades/pagamento', {
       method: 'POST',

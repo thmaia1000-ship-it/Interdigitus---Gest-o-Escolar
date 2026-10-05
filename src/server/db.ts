@@ -1176,7 +1176,7 @@ class DatabaseManager {
     return item;
   }
 
-  // Operação financeira de recebimento com atualização atômica e registro opcional no Caixa
+  // Operação financeira de recebimento com atualização atômica, suporte a 2 formas de pagamento e registro no Caixa
   public registrarPagamentoMensalidade(payload: {
     idmensalidade: number;
     valor_pago: number;
@@ -1184,18 +1184,26 @@ class DatabaseManager {
     gerar_caixa: boolean;
     observacao?: string;
     operatorUser: string;
+    em_duas_formas?: boolean;
+    forma_pagamento_2?: string;
+    valor_pago_2?: number;
   }) {
     const idx = this.memDb.tb_mensalidades.findIndex((m) => m.ID_mensalidade === payload.idmensalidade);
     if (idx === -1) throw new Error('Mensalidade não encontrada.');
     const mens = this.memDb.tb_mensalidades[idx];
 
-    if (payload.valor_pago <= 0) throw new Error('O valor pago deve ser maior que zero.');
-    if (payload.valor_pago > mens.saldo_devedor) {
-      throw new Error(`O valor pago (R$ ${payload.valor_pago.toFixed(2)}) não pode ser superior ao saldo devedor atual (R$ ${mens.saldo_devedor.toFixed(2)}).`);
+    const emDuasFormas = Boolean(payload.em_duas_formas && payload.forma_pagamento_2 && (payload.valor_pago_2 || 0) > 0);
+    const valor1 = Number(payload.valor_pago) || 0;
+    const valor2 = emDuasFormas ? (Number(payload.valor_pago_2) || 0) : 0;
+    const totalPago = Number((valor1 + valor2).toFixed(2));
+
+    if (totalPago <= 0) throw new Error('O valor pago deve ser maior que zero.');
+    if (totalPago > (mens.saldo_devedor + 0.05)) {
+      throw new Error(`O valor total pago (R$ ${totalPago.toFixed(2)}) não pode ser superior ao saldo devedor atual (R$ ${mens.saldo_devedor.toFixed(2)}).`);
     }
 
     // Atualiza saldo e parcelas pagas
-    const novoSaldo = Math.max(0, mens.saldo_devedor - payload.valor_pago);
+    const novoSaldo = Math.max(0, mens.saldo_devedor - totalPago);
     const parcelasNum = parseInt(mens.parcelas_pagas || '0', 10) + 1;
     this.memDb.tb_mensalidades[idx].saldo_devedor = Number(novoSaldo.toFixed(2));
     this.memDb.tb_mensalidades[idx].parcelas_pagas = String(parcelasNum);
@@ -1206,55 +1214,251 @@ class DatabaseManager {
     const horaAtual = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     let caixaCriado: Caixa | null = null;
+    let caixaCriado2: Caixa | null = null;
+
     if (payload.gerar_caixa) {
-      const nextCaixaId = this.memDb.tb_caixa.reduce((max, c) => Math.max(max, c.ID_caixa), 0) + 1;
-      const desc = payload.observacao || `Recebimento Mensalidade Parcela ${parcelasNum}/${mens.n_parcelas} - ${aluno?.nome_aluno || ''}`;
+      const baseDesc = payload.observacao || `Recebimento Mensalidade Parcela ${parcelasNum}/${mens.n_parcelas} - ${aluno?.nome_aluno || ''}`;
 
-      caixaCriado = {
-        ID_caixa: nextCaixaId,
-        valor_total: payload.valor_pago,
-        forma: payload.forma_pagamento,
-        tipo_movimentacao: 'Entrada',
-        descricao: desc,
-        usuario: payload.operatorUser,
-        data: dataAtual,
-        horario: horaAtual,
-        nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
-        curso: mens.curso,
-        idaluno: mens.idaluno,
-        mensalidades_pagas: parcelasNum,
-        idmensalidade: mens.ID_mensalidade,
-      };
-      this.memDb.tb_caixa.push(caixaCriado);
+      if (emDuasFormas) {
+        // Lançamento Forma 1
+        const nextCaixaId1 = this.memDb.tb_caixa.reduce((max, c) => Math.max(max, c.ID_caixa), 0) + 1;
+        const desc1 = `${baseDesc} [Forma 1/2: ${payload.forma_pagamento} R$ ${valor1.toFixed(2)}]`;
+        caixaCriado = {
+          ID_caixa: nextCaixaId1,
+          valor_total: valor1,
+          forma: payload.forma_pagamento,
+          tipo_movimentacao: 'Entrada',
+          descricao: desc1,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+        };
+        this.memDb.tb_caixa.push(caixaCriado);
 
-      // Inserção atômica no log_caixa (auditoria imutável)
-      const nextLogId = this.memDb.log_caixa.reduce((max, l) => Math.max(max, l.ID_log_caixa), 0) + 1;
-      const logItem: LogCaixa = {
-        ID_log_caixa: nextLogId,
-        valor_total: payload.valor_pago,
-        forma: payload.forma_pagamento,
-        tipo_movimentacao: 'Entrada',
-        descricao: desc,
-        usuario: payload.operatorUser,
-        data: dataAtual,
-        horario: horaAtual,
-        nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
-        curso: mens.curso,
-        idaluno: mens.idaluno,
-        mensalidades_pagas: parcelasNum,
-        idmensalidade: mens.ID_mensalidade,
-        justificativa: 'Baixa de mensalidade regular com quitação via sistema',
-        tipo: 'RECEBIMENTO_MENSALIDADE',
-        data_log: dataAtual,
-        usuario_log: payload.operatorUser,
-      };
-      this.memDb.log_caixa.push(logItem);
+        const nextLogId1 = this.memDb.log_caixa.reduce((max, l) => Math.max(max, l.ID_log_caixa), 0) + 1;
+        this.memDb.log_caixa.push({
+          ID_log_caixa: nextLogId1,
+          valor_total: valor1,
+          forma: payload.forma_pagamento,
+          tipo_movimentacao: 'Entrada',
+          descricao: desc1,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+          justificativa: 'Baixa de mensalidade (Forma 1/2 pagamento misto)',
+          tipo: 'RECEBIMENTO_MENSALIDADE',
+          data_log: dataAtual,
+          usuario_log: payload.operatorUser,
+        });
+
+        // Lançamento Forma 2
+        const nextCaixaId2 = this.memDb.tb_caixa.reduce((max, c) => Math.max(max, c.ID_caixa), 0) + 1;
+        const desc2 = `${baseDesc} [Forma 2/2: ${payload.forma_pagamento_2} R$ ${valor2.toFixed(2)}]`;
+        caixaCriado2 = {
+          ID_caixa: nextCaixaId2,
+          valor_total: valor2,
+          forma: payload.forma_pagamento_2!,
+          tipo_movimentacao: 'Entrada',
+          descricao: desc2,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+        };
+        this.memDb.tb_caixa.push(caixaCriado2);
+
+        const nextLogId2 = this.memDb.log_caixa.reduce((max, l) => Math.max(max, l.ID_log_caixa), 0) + 1;
+        this.memDb.log_caixa.push({
+          ID_log_caixa: nextLogId2,
+          valor_total: valor2,
+          forma: payload.forma_pagamento_2!,
+          tipo_movimentacao: 'Entrada',
+          descricao: desc2,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+          justificativa: 'Baixa de mensalidade (Forma 2/2 pagamento misto)',
+          tipo: 'RECEBIMENTO_MENSALIDADE',
+          data_log: dataAtual,
+          usuario_log: payload.operatorUser,
+        });
+      } else {
+        const nextCaixaId = this.memDb.tb_caixa.reduce((max, c) => Math.max(max, c.ID_caixa), 0) + 1;
+        caixaCriado = {
+          ID_caixa: nextCaixaId,
+          valor_total: valor1,
+          forma: payload.forma_pagamento,
+          tipo_movimentacao: 'Entrada',
+          descricao: baseDesc,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+        };
+        this.memDb.tb_caixa.push(caixaCriado);
+
+        const nextLogId = this.memDb.log_caixa.reduce((max, l) => Math.max(max, l.ID_log_caixa), 0) + 1;
+        this.memDb.log_caixa.push({
+          ID_log_caixa: nextLogId,
+          valor_total: valor1,
+          forma: payload.forma_pagamento,
+          tipo_movimentacao: 'Entrada',
+          descricao: baseDesc,
+          usuario: payload.operatorUser,
+          data: dataAtual,
+          horario: horaAtual,
+          nome: aluno ? aluno.nome_aluno : `Aluno #${mens.idaluno}`,
+          curso: mens.curso,
+          idaluno: mens.idaluno,
+          mensalidades_pagas: parcelasNum,
+          idmensalidade: mens.ID_mensalidade,
+          justificativa: 'Baixa de mensalidade regular com quitação via sistema',
+          tipo: 'RECEBIMENTO_MENSALIDADE',
+          data_log: dataAtual,
+          usuario_log: payload.operatorUser,
+        });
+      }
     }
 
     this.persist();
     return {
       mensalidade: this.memDb.tb_mensalidades[idx],
       caixa: caixaCriado,
+      caixa2: caixaCriado2,
+      total_pago: totalPago,
+      em_duas_formas: emDuasFormas,
+    };
+  }
+
+  // Quadro de detalhes das mensalidades de um aluno (Pagas, Atrasadas e A Vencer)
+  public getMensalidadesDetalheAluno(idaluno: number) {
+    const today = new Date().toISOString().split('T')[0];
+    const contratos = this.memDb.tb_mensalidades.filter((m) => m.idaluno === idaluno);
+    const aluno = this.memDb.tb_alunos.find((a) => a.ID_aluno === idaluno);
+    const pagamentosCaixa = this.memDb.tb_caixa
+      .filter((c) => c.idaluno === idaluno)
+      .sort((a, b) => (b.data || '').localeCompare(a.data || '') || b.ID_caixa - a.ID_caixa);
+
+    const parcelas: Array<{
+      numero: number;
+      contratoId: number;
+      curso: string;
+      valor: number;
+      data_vencimento: string;
+      status: 'PAGA' | 'ATRASADA' | 'AVENCER';
+      status_label: string;
+      dias_atraso: number;
+      paga: boolean;
+    }> = [];
+
+    let totalPagasQtd = 0;
+    let totalPagasValor = 0;
+    let totalAtrasadasQtd = 0;
+    let totalAtrasadasValor = 0;
+    let totalAvencerQtd = 0;
+    let totalAvencerValor = 0;
+
+    for (const m of contratos) {
+      const nParcelas = parseInt(m.n_parcelas || '1', 10);
+      const parcelasPagas = parseInt(m.parcelas_pagas || '0', 10);
+      const valorParcela = Number(m.valor_parcela) || 0;
+
+      const baseDateStr = m.data_inicio || m.data_pagar || today;
+      let baseYear = parseInt(baseDateStr.slice(0, 4), 10) || new Date().getFullYear();
+      let baseMonth = parseInt(baseDateStr.slice(5, 7), 10) || (new Date().getMonth() + 1);
+      let baseDay = parseInt(baseDateStr.slice(8, 10), 10) || 10;
+
+      for (let i = 1; i <= nParcelas; i++) {
+        const d = new Date(baseYear, baseMonth - 1 + (i - 1), baseDay);
+        const vencimentoStr = d.toISOString().split('T')[0];
+
+        if (i <= parcelasPagas) {
+          totalPagasQtd++;
+          totalPagasValor += valorParcela;
+          parcelas.push({
+            numero: i,
+            contratoId: m.ID_mensalidade,
+            curso: m.curso,
+            valor: valorParcela,
+            data_vencimento: vencimentoStr,
+            status: 'PAGA',
+            status_label: 'Paga / Quitada',
+            dias_atraso: 0,
+            paga: true,
+          });
+        } else {
+          if (vencimentoStr < today) {
+            const diffTime = Math.abs(new Date(today).getTime() - new Date(vencimentoStr).getTime());
+            const diasAtraso = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            totalAtrasadasQtd++;
+            totalAtrasadasValor += valorParcela;
+            parcelas.push({
+              numero: i,
+              contratoId: m.ID_mensalidade,
+              curso: m.curso,
+              valor: valorParcela,
+              data_vencimento: vencimentoStr,
+              status: 'ATRASADA',
+              status_label: `Atrasada (${diasAtraso}d)`,
+              dias_atraso: diasAtraso,
+              paga: false,
+            });
+          } else {
+            totalAvencerQtd++;
+            totalAvencerValor += valorParcela;
+            parcelas.push({
+              numero: i,
+              contratoId: m.ID_mensalidade,
+              curso: m.curso,
+              valor: valorParcela,
+              data_vencimento: vencimentoStr,
+              status: 'AVENCER',
+              status_label: 'A Vencer',
+              dias_atraso: 0,
+              paga: false,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      aluno: aluno ? { ID_aluno: aluno.ID_aluno, nome_aluno: aluno.nome_aluno, cpf: aluno.cpf } : null,
+      contratos,
+      resumo: {
+        total_pagas_qtd: totalPagasQtd,
+        total_pagas_valor: totalPagasValor,
+        total_atrasadas_qtd: totalAtrasadasQtd,
+        total_atrasadas_valor: totalAtrasadasValor,
+        total_avencer_qtd: totalAvencerQtd,
+        total_avencer_valor: totalAvencerValor,
+        saldo_devedor_total: totalAtrasadasValor + totalAvencerValor,
+      },
+      parcelas,
+      historico_caixa: pagamentosCaixa.slice(0, 10),
     };
   }
 
