@@ -7,7 +7,6 @@ import {
   Check,
   X,
   Printer,
-  Wallet,
   Clock,
   User,
   ArrowLeft,
@@ -15,11 +14,16 @@ import {
   Minimize2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   CreditCard,
   Banknote,
   QrCode,
   FileText,
-  RotateCcw,
+  Calendar,
+  Sparkles,
+  Layers,
+  GraduationCap,
+  PlusCircle,
 } from 'lucide-react';
 
 // Normalização para busca sem acentos e minúsculo
@@ -63,13 +67,13 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de dados
-  const [mensalidades, setMensalidades] = useState<any[]>([]);
+  const [itens, setItens] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
 
-  // Filtros de busca letra por letra
+  // Filtros de busca letra por letra e status
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroApenasComSaldo, setFiltroApenasComSaldo] = useState(true);
+  const [statusTab, setStatusTab] = useState<'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS' | 'SEM_CONTRATO'>('TODAS');
 
   // Formulário de Quitação
   const [recebimentoData, setRecebimentoData] = useState({
@@ -78,6 +82,15 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     gerar_caixa: true,
     observacao: '',
   });
+
+  // Formulário de Gerar Contrato Rápido (caso o aluno não tenha mensalidade ainda)
+  const [novoContratoData, setNovoContratoData] = useState({
+    n_parcelas: 10,
+    valor_parcela: 150,
+    valor_total: 1500,
+    data_pagar: new Date().toISOString().split('T')[0],
+  });
+  const [gerandoContrato, setGerandoContrato] = useState(false);
 
   // Relógio e Tela Cheia
   const [currentTime, setCurrentTime] = useState('');
@@ -119,68 +132,103 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     searchInputRef.current?.focus();
   }, []);
 
-  // Carregar lista de mensalidades da API
-  const loadMensalidades = async () => {
+  // Carregar lista completa de alunos e mensalidades
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await api.getMensalidades();
-      setMensalidades(data);
+      const data = await api.getPesquisaAlunosMensalidades();
+      setItens(data);
       if (data.length > 0 && !selectedPlano) {
-        const primeiroComSaldo = data.find((m: any) => (m.saldo_devedor || 0) > 0) || data[0];
-        if (primeiroComSaldo) {
-          selectPlano(primeiroComSaldo);
+        // Selecionar prioritariamente o primeiro aluno com mensalidade vencida ou a vencer
+        const prioritario =
+          data.find((m: any) => m.status_parcela === 'VENCIDA') ||
+          data.find((m: any) => m.status_parcela === 'AVENCER') ||
+          data[0];
+        if (prioritario) {
+          selectPlano(prioritario);
         }
       }
     } catch (err: any) {
-      setMsg({ type: 'err', text: err.message || 'Erro ao carregar mensalidades.' });
+      setMsg({ type: 'err', text: err.message || 'Erro ao carregar dados dos alunos e mensalidades.' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadMensalidades();
+    loadData();
   }, []);
 
-  const selectPlano = (plano: any) => {
-    setSelectedPlano(plano);
-    setRecebimentoData((prev) => ({
-      ...prev,
-      valor_pago: Math.min(plano.valor_parcela || 0, plano.saldo_devedor || 0),
-      observacao: `Recebimento Mensalidade Aluno: ${plano.nome_aluno} (${plano.curso})`,
-    }));
+  const selectPlano = (item: any) => {
+    setSelectedPlano(item);
+    if (item.tem_contrato) {
+      setRecebimentoData((prev) => ({
+        ...prev,
+        valor_pago: Math.min(item.valor_parcela || 0, item.saldo_devedor || 0),
+        observacao: `Recebimento Mensalidade Aluno: ${item.nome_aluno} (${item.curso})`,
+      }));
+    } else {
+      setNovoContratoData({
+        n_parcelas: 10,
+        valor_parcela: 150,
+        valor_total: 1500,
+        data_pagar: new Date().toISOString().split('T')[0],
+      });
+    }
   };
 
-  // Filtragem em tempo real letra por letra
-  const filteredMensalidades = mensalidades.filter((m) => {
-    if (filtroApenasComSaldo && (m.saldo_devedor || 0) <= 0) return false;
+  // Contadores para as abas
+  const counts = {
+    todas: itens.length,
+    vencidas: itens.filter((i) => i.status_parcela === 'VENCIDA').length,
+    avencer: itens.filter((i) => i.status_parcela === 'AVENCER').length,
+    pagas: itens.filter((i) => i.status_parcela === 'PAGA').length,
+    semContrato: itens.filter((i) => i.status_parcela === 'SEM_CONTRATO').length,
+  };
+
+  // Filtragem em tempo real letra por letra no client
+  const filteredItens = itens.filter((item) => {
+    // Filtro da aba
+    if (statusTab === 'VENCIDAS' && item.status_parcela !== 'VENCIDA') return false;
+    if (statusTab === 'AVENCER' && item.status_parcela !== 'AVENCER') return false;
+    if (statusTab === 'PAGAS' && item.status_parcela !== 'PAGA') return false;
+    if (statusTab === 'SEM_CONTRATO' && item.status_parcela !== 'SEM_CONTRATO') return false;
+
+    // Filtro de texto
     if (!searchTerm.trim()) return true;
 
     const term = normalizeSearch(searchTerm);
     const cleanDigits = searchTerm.replace(/[^\d]/g, '');
-    const cleanCpf = (m.cpf_aluno || '').replace(/[^\d]/g, '');
-    const nomeAlunoNorm = normalizeSearch(m.nome_aluno || '');
-    const cursoNorm = normalizeSearch(m.curso || '');
+    const cleanCpf = (item.cpf_aluno || '').replace(/[^\d]/g, '');
+    const nomeAlunoNorm = normalizeSearch(item.nome_aluno || '');
+    const cursoNorm = normalizeSearch(item.curso || '');
+    const statusNorm = normalizeSearch(item.status_parcela || '');
+    const statusLabelNorm = normalizeSearch(item.status_label || '');
 
     return (
       nomeAlunoNorm.includes(term) ||
       (cleanDigits.length >= 2 && cleanCpf.includes(cleanDigits)) ||
       cursoNorm.includes(term) ||
-      String(m.ID_mensalidade).includes(term)
+      statusNorm.includes(term) ||
+      statusLabelNorm.includes(term) ||
+      String(item.idaluno).includes(term) ||
+      (item.ID_mensalidade && String(item.ID_mensalidade).includes(term))
     );
   });
 
-  // Ao digitar letras, seleciona automaticamente o primeiro resultado caso o atual não esteja nos resultados
+  // Ao digitar letras ou mudar aba, seleciona automaticamente o primeiro resultado caso o atual não esteja nos resultados
   useEffect(() => {
-    if (searchTerm.trim() && filteredMensalidades.length > 0) {
-      const stillSelected = filteredMensalidades.some(
-        (m) => m.ID_mensalidade === selectedPlano?.ID_mensalidade
+    if (filteredItens.length > 0) {
+      const stillSelected = filteredItens.some(
+        (m) =>
+          (m.ID_mensalidade && m.ID_mensalidade === selectedPlano?.ID_mensalidade) ||
+          (!m.ID_mensalidade && m.idaluno === selectedPlano?.idaluno)
       );
       if (!stillSelected) {
-        selectPlano(filteredMensalidades[0]);
+        selectPlano(filteredItens[0]);
       }
     }
-  }, [searchTerm, filtroApenasComSaldo]);
+  }, [searchTerm, statusTab]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -196,7 +244,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
 
   const handleConfirmarRecebimento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlano) return;
+    if (!selectedPlano || !selectedPlano.tem_contrato) return;
     const valorNum = Number(recebimentoData.valor_pago);
     if (valorNum <= 0) {
       setMsg({ type: 'err', text: 'Informe um valor válido maior que zero.' });
@@ -235,8 +283,8 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
         text: `Recebimento de ${formatMoney(valorNum)} do aluno(a) ${selectedPlano.nome_aluno} quitado com sucesso!`,
       });
 
-      // Recarregar mensalidades
-      await loadMensalidades();
+      // Recarregar lista completa
+      await loadData();
       searchInputRef.current?.focus();
     } catch (err: any) {
       setMsg({ type: 'err', text: err.message || 'Falha ao processar quitação.' });
@@ -245,12 +293,41 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
     }
   };
 
+  // Gerar contrato de mensalidade para aluno sem contrato
+  const handleGerarContratoRapido = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlano || selectedPlano.tem_contrato) return;
+    setGerandoContrato(true);
+    setMsg(null);
+    try {
+      const novo = await api.gerarContratoMensalidadeRapido({
+        idaluno: selectedPlano.idaluno,
+        curso: selectedPlano.curso,
+        n_parcelas: novoContratoData.n_parcelas,
+        valor_parcela: novoContratoData.valor_parcela,
+        valor_total: novoContratoData.n_parcelas * novoContratoData.valor_parcela,
+        data_pagar: novoContratoData.data_pagar,
+      });
+
+      setMsg({
+        type: 'ok',
+        text: `Contrato de mensalidade (${novo.n_parcelas} parcelas de ${formatMoney(novo.valor_parcela)}) gerado com sucesso para o aluno ${selectedPlano.nome_aluno}!`,
+      });
+
+      await loadData();
+    } catch (err: any) {
+      setMsg({ type: 'err', text: err.message || 'Falha ao gerar contrato.' });
+    } finally {
+      setGerandoContrato(false);
+    }
+  };
+
   const formasPagamento = [
-    { id: 'PIX', label: 'PIX', icon: QrCode, color: 'text-teal-600 bg-teal-50 border-teal-200' },
-    { id: 'Dinheiro', label: 'Dinheiro', icon: Banknote, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    { id: 'Cartão Débito', label: 'Débito', icon: CreditCard, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-    { id: 'Cartão Crédito', label: 'Crédito', icon: CreditCard, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-    { id: 'Boleto', label: 'Boleto', icon: FileText, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+    { id: 'PIX', label: 'PIX', icon: QrCode },
+    { id: 'Dinheiro', label: 'Dinheiro', icon: Banknote },
+    { id: 'Cartão Débito', label: 'Débito', icon: CreditCard },
+    { id: 'Cartão Crédito', label: 'Crédito', icon: CreditCard },
+    { id: 'Boleto', label: 'Boleto', icon: FileText },
   ];
 
   return (
@@ -274,10 +351,10 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Terminal Exclusivo Aberto
+                Terminal Exclusivo Ativo
               </span>
               <span>·</span>
-              <span className="hidden sm:inline">Baixa no Livro Caixa e Quitação Escolar</span>
+              <span className="hidden sm:inline">Busca ampliada em toda a base de alunos</span>
             </div>
           </div>
         </div>
@@ -324,25 +401,14 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
 
       {/* Conteúdo Principal Dividido em 2 Colunas */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-950">
-        {/* COLUNA ESQUERDA: Busca de Alunos e Lista em Tempo Real */}
+        {/* COLUNA ESQUERDA: Busca de Alunos e Abas de Status */}
         <div className="w-full lg:w-5/12 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col bg-slate-900/60 p-4 min-w-0">
           <div className="space-y-2.5 mb-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Search className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Busca de Alunos (Instantânea letra por letra)</span>
+                <span>Busca de Alunos (Todos os Nomes da Base)</span>
               </label>
-              <button
-                type="button"
-                onClick={() => setFiltroApenasComSaldo(!filtroApenasComSaldo)}
-                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold transition-colors flex items-center gap-1 ${
-                  filtroApenasComSaldo
-                    ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                    : 'bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span>{filtroApenasComSaldo ? 'Apenas com Saldo Aberto' : 'Todos os Contratos'}</span>
-              </button>
             </div>
 
             {/* Input com autofocus e live filter */}
@@ -372,39 +438,112 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
               )}
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+            {/* Abas Rápidas de Status: Vencidas, A Vencer, Pagas, Todas */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setStatusTab('TODAS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  statusTab === 'TODAS'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                }`}
+              >
+                <span>Todas</span>
+                <span className="text-[10px] font-mono opacity-80">({counts.todas})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusTab('VENCIDAS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  statusTab === 'VENCIDAS'
+                    ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400'
+                    : 'bg-rose-950/40 text-rose-300 hover:bg-rose-950/70 border border-rose-900/60'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span>Vencidas</span>
+                <span className="text-[10px] font-mono font-bold">({counts.vencidas})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusTab('AVENCER')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  statusTab === 'AVENCER'
+                    ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400'
+                    : 'bg-amber-950/40 text-amber-300 hover:bg-amber-950/70 border border-amber-900/60'
+                }`}
+              >
+                <span>A Vencer</span>
+                <span className="text-[10px] font-mono">({counts.avencer})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusTab('PAGAS')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  statusTab === 'PAGAS'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-emerald-950/40 text-emerald-300 hover:bg-emerald-950/70 border border-emerald-900/60'
+                }`}
+              >
+                <span>Pagas</span>
+                <span className="text-[10px] font-mono">({counts.pagas})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusTab('SEM_CONTRATO')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  statusTab === 'SEM_CONTRATO'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+                }`}
+              >
+                <span>Sem Contrato</span>
+                <span className="text-[10px] font-mono">({counts.semContrato})</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
               <span>
                 {searchTerm ? (
                   <>
                     Filtrando por: <strong className="text-emerald-400">"{searchTerm}"</strong>
                   </>
                 ) : (
-                  'Todos os contratos disponíveis'
+                  <span>
+                    Exibindo categoria: <strong>{statusTab}</strong>
+                  </span>
                 )}
               </span>
               <span className="font-mono text-emerald-400 font-bold bg-emerald-950/70 border border-emerald-800/60 px-2 py-0.5 rounded">
-                {filteredMensalidades.length} aluno(s)
+                {filteredItens.length} resultado(s)
               </span>
             </div>
           </div>
 
-          {/* Lista de Alunos com Rolagem Rápida */}
+          {/* Lista de Alunos e Contratos com Rolagem */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
             {loading ? (
               <div className="p-8 text-center text-slate-500 text-xs">
-                Carregando base de alunos e mensalidades...
+                Carregando base completa de alunos e mensalidades...
               </div>
-            ) : filteredMensalidades.length === 0 ? (
+            ) : filteredItens.length === 0 ? (
               <div className="p-8 text-center text-slate-500 bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-xs">
-                Nenhum aluno encontrado para "{searchTerm}".
+                Nenhum aluno ou contrato localizado para o filtro selecionado.
               </div>
             ) : (
-              filteredMensalidades.map((m) => {
-                const isSelected = selectedPlano?.ID_mensalidade === m.ID_mensalidade;
-                const temSaldo = (m.saldo_devedor || 0) > 0;
+              filteredItens.map((m) => {
+                const isSelected =
+                  (m.ID_mensalidade && selectedPlano?.ID_mensalidade === m.ID_mensalidade) ||
+                  (!m.ID_mensalidade && selectedPlano?.idaluno === m.idaluno);
+
                 return (
                   <div
-                    key={m.ID_mensalidade}
+                    key={`${m.idaluno}-${m.ID_mensalidade || 'sem'}`}
                     onClick={() => selectPlano(m)}
                     className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
                       isSelected
@@ -429,22 +568,65 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
                             CPF: {highlightMatch(m.cpf_aluno || '-', searchTerm)}
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                          {highlightMatch(m.curso, searchTerm)} · Parc. {m.parcelas_pagas || 0}/{m.n_parcelas} · R${' '}
-                          {(m.valor_parcela || 0).toFixed(2)}/mês
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
+                          <span>{highlightMatch(m.curso, searchTerm)}</span>
+                          {m.tem_contrato && (
+                            <>
+                              <span>·</span>
+                              <span>
+                                Parc. {m.parcelas_pagas}/{m.n_parcelas}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {/* Badge de Status da Mensalidade */}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          {m.status_parcela === 'VENCIDA' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                              VENCIDA {m.dias_atraso > 0 ? `(${m.dias_atraso}d em atraso)` : ''}
+                            </span>
+                          )}
+                          {m.status_parcela === 'AVENCER' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                              A VENCER ({m.data_pagar || 'No prazo'})
+                            </span>
+                          )}
+                          {m.status_parcela === 'PAGA' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              PAGA (Quitada)
+                            </span>
+                          )}
+                          {m.status_parcela === 'SEM_CONTRATO' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                              Sem Contrato Gerado
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-500 block">Saldo Devedor</span>
+                      <span className="text-[10px] text-slate-500 block">Saldo</span>
                       <span
                         className={`font-mono font-bold text-xs ${
-                          temSaldo ? 'text-rose-400' : 'text-emerald-400'
+                          m.status_parcela === 'VENCIDA'
+                            ? 'text-rose-400'
+                            : m.status_parcela === 'AVENCER'
+                            ? 'text-amber-400'
+                            : m.status_parcela === 'PAGA'
+                            ? 'text-emerald-400'
+                            : 'text-slate-500'
                         }`}
                       >
-                        {formatMoney(m.saldo_devedor)}
+                        {m.tem_contrato ? formatMoney(m.saldo_devedor) : 'R$ 0,00'}
                       </span>
+                      {m.tem_contrato && (
+                        <span className="text-[10px] text-slate-500 block font-mono">
+                          {formatMoney(m.valor_parcela)}/mês
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -453,7 +635,7 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
           </div>
         </div>
 
-        {/* COLUNA DIREITA: Terminal de Baixa e Confirmação de Pagamento */}
+        {/* COLUNA DIREITA: Detalhes, Baixa e Pagamento */}
         <div className="w-full lg:w-7/12 flex flex-col bg-slate-950 p-4 sm:p-6 overflow-y-auto custom-scrollbar">
           {msg && (
             <div
@@ -473,173 +655,328 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
           )}
 
           {selectedPlano ? (
-            <form onSubmit={handleConfirmarRecebimento} className="space-y-4">
-              {/* Card Resumo do Aluno Selecionado */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                  <div>
-                    <span className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider font-bold">
-                      Aluno Selecionado para Quitação
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold text-white mt-0.5">
-                      {selectedPlano.nome_aluno}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
-                      <span>CPF: <strong className="text-slate-200 font-mono">{selectedPlano.cpf_aluno || '-'}</strong></span>
-                      <span>·</span>
-                      <span>Curso: <strong className="text-slate-200">{selectedPlano.curso}</strong></span>
-                      <span>·</span>
-                      <span>Contrato: <strong className="text-slate-200 font-mono">#{selectedPlano.ID_mensalidade}</strong></span>
+            selectedPlano.tem_contrato ? (
+              <form onSubmit={handleConfirmarRecebimento} className="space-y-4">
+                {/* Banner de Status Especial se Vencida ou Paga */}
+                {selectedPlano.status_parcela === 'VENCIDA' && (
+                  <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl flex items-center gap-2.5 text-xs text-rose-200">
+                    <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 animate-bounce" />
+                    <div>
+                      <strong>Atenção: Mensalidade Vencida!</strong>
+                      <p className="text-[11px] text-rose-300">
+                        Venceu em {selectedPlano.data_pagar}{' '}
+                        {selectedPlano.dias_atraso > 0 ? `(${selectedPlano.dias_atraso} dias de atraso)` : ''}.
+                        Priorize a quitação no caixa.
+                      </p>
                     </div>
                   </div>
+                )}
 
-                  <div className="text-left sm:text-right bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Saldo Devedor Atual</div>
-                    <div className="text-xl sm:text-2xl font-bold font-mono text-rose-400">
-                      {formatMoney(selectedPlano.saldo_devedor)}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      Parcelas: {selectedPlano.parcelas_pagas || 0} de {selectedPlano.n_parcelas} pagas
+                {selectedPlano.status_parcela === 'PAGA' && (
+                  <div className="p-3 bg-emerald-950/80 border border-emerald-800 rounded-xl flex items-center gap-2.5 text-xs text-emerald-200">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div>
+                      <strong>Mensalidade Integralmente Quitada!</strong>
+                      <p className="text-[11px] text-emerald-300">
+                        Todas as {selectedPlano.n_parcelas} parcelas deste contrato já foram pagas. Saldo restante: R$ 0,00.
+                      </p>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Seletor Rápido de Forma de Pagamento */}
-                <div className="pt-4">
-                  <label className="block text-xs font-bold text-slate-300 mb-2">
-                    Forma de Pagamento no Caixa *
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {formasPagamento.map((f) => {
-                      const Icon = f.icon;
-                      const isChosen = recebimentoData.forma_pagamento === f.id;
-                      return (
-                        <button
-                          key={f.id}
-                          type="button"
-                          onClick={() => setRecebimentoData({ ...recebimentoData, forma_pagamento: f.id })}
-                          className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                            isChosen
-                              ? 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-950 font-bold scale-[1.02]'
-                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-xs">{f.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Campos do Valor e Observação */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Valor a Receber (R$) *
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-500 font-mono font-bold text-sm">
-                        R$
+                {/* Card Resumo do Aluno e Contrato */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider font-bold">
+                        Aluno Selecionado da Base
                       </span>
+                      <h3 className="text-base sm:text-lg font-bold text-white mt-0.5">
+                        {selectedPlano.nome_aluno}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
+                        <span>
+                          CPF: <strong className="text-slate-200 font-mono">{selectedPlano.cpf_aluno || '-'}</strong>
+                        </span>
+                        <span>·</span>
+                        <span>
+                          Curso: <strong className="text-slate-200">{selectedPlano.curso}</strong>
+                        </span>
+                        <span>·</span>
+                        <span>
+                          Contrato: <strong className="text-slate-200 font-mono">#{selectedPlano.ID_mensalidade}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-left sm:text-right bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Saldo Devedor</div>
+                      <div
+                        className={`text-xl sm:text-2xl font-bold font-mono ${
+                          selectedPlano.status_parcela === 'VENCIDA'
+                            ? 'text-rose-400'
+                            : selectedPlano.status_parcela === 'PAGA'
+                            ? 'text-emerald-400'
+                            : 'text-amber-400'
+                        }`}
+                      >
+                        {formatMoney(selectedPlano.saldo_devedor)}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Parcelas: {selectedPlano.parcelas_pagas || 0} de {selectedPlano.n_parcelas} pagas
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seletor Rápido de Forma de Pagamento */}
+                  <div className="pt-4">
+                    <label className="block text-xs font-bold text-slate-300 mb-2">
+                      Forma de Pagamento no Caixa *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {formasPagamento.map((f) => {
+                        const Icon = f.icon;
+                        const isChosen = recebimentoData.forma_pagamento === f.id;
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setRecebimentoData({ ...recebimentoData, forma_pagamento: f.id })}
+                            className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+                              isChosen
+                                ? 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-950 font-bold scale-[1.02]'
+                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="text-xs">{f.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Campos do Valor e Observação */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Valor a Receber (R$) *
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-slate-500 font-mono font-bold text-sm">
+                          R$
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max={selectedPlano.saldo_devedor || undefined}
+                          required
+                          value={recebimentoData.valor_pago || ''}
+                          onChange={(e) =>
+                            setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
+                          }
+                          className="w-full pl-10 pr-3 py-2 text-base font-bold font-mono bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div className="flex gap-1.5 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRecebimentoData({
+                              ...recebimentoData,
+                              valor_pago: Math.min(
+                                selectedPlano.valor_parcela || 0,
+                                selectedPlano.saldo_devedor || 0
+                              ),
+                            })
+                          }
+                          className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
+                        >
+                          1 Parcela ({formatMoney(selectedPlano.valor_parcela)})
+                        </button>
+                        {selectedPlano.saldo_devedor > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRecebimentoData({
+                                ...recebimentoData,
+                                valor_pago: selectedPlano.saldo_devedor || 0,
+                              })
+                            }
+                            className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
+                          >
+                            Quitar Total ({formatMoney(selectedPlano.saldo_devedor)})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Observação / Identificação do Recibo
+                      </label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        max={selectedPlano.saldo_devedor || undefined}
-                        required
-                        value={recebimentoData.valor_pago || ''}
+                        type="text"
+                        value={recebimentoData.observacao}
                         onChange={(e) =>
-                          setRecebimentoData({ ...recebimentoData, valor_pago: Number(e.target.value) })
+                          setRecebimentoData({ ...recebimentoData, observacao: e.target.value })
                         }
-                        className="w-full pl-10 pr-3 py-2 text-base font-bold font-mono bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
-                    <div className="flex gap-1.5 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setRecebimentoData({
-                            ...recebimentoData,
-                            valor_pago: Math.min(selectedPlano.valor_parcela || 0, selectedPlano.saldo_devedor || 0),
-                          })
+                  </div>
+
+                  {/* Opção Integrar no Livro Caixa */}
+                  <div className="pt-4 border-t border-slate-800 mt-4">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={recebimentoData.gerar_caixa}
+                        onChange={(e) =>
+                          setRecebimentoData({ ...recebimentoData, gerar_caixa: e.target.checked })
                         }
-                        className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
-                      >
-                        1 Parcela ({formatMoney(selectedPlano.valor_parcela)})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setRecebimentoData({
-                            ...recebimentoData,
-                            valor_pago: selectedPlano.saldo_devedor || 0,
-                          })
-                        }
-                        className="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium"
-                      >
-                        Quitar Total ({formatMoney(selectedPlano.saldo_devedor)})
-                      </button>
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-950 border-slate-700"
+                      />
+                      <span>
+                        Lançar automaticamente como <strong>Entrada</strong> no Livro Caixa diário
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Botão de Quitação Principal */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={submitting || Number(recebimentoData.valor_pago) <= 0}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl transition-all shadow-lg shadow-emerald-950 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Check className="w-5 h-5" />
+                    <span>
+                      {submitting
+                        ? 'Processando Quitação...'
+                        : `Confirmar Recebimento de ${formatMoney(Number(recebimentoData.valor_pago))} (Enter)`}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* ALUNO CADASTRADO MAS SEM CONTRATO FINANCEIRO AINDA */
+              <div className="space-y-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-400 font-mono font-bold uppercase">
+                        Aluno(a) Cadastrado(a) na Tabela Alunos
+                      </span>
+                      <h3 className="text-base font-bold text-white">{selectedPlano.nome_aluno}</h3>
+                      <div className="text-xs text-slate-400">
+                        CPF: <strong className="text-slate-300 font-mono">{selectedPlano.cpf_aluno}</strong> · Curso:{' '}
+                        <strong className="text-slate-300">{selectedPlano.curso}</strong>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Observação / Identificação do Recibo
-                    </label>
-                    <input
-                      type="text"
-                      value={recebimentoData.observacao}
-                      onChange={(e) =>
-                        setRecebimentoData({ ...recebimentoData, observacao: e.target.value })
-                      }
-                      className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                  <div className="mt-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-xs text-amber-200">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      Este aluno ainda não possui contrato financeiro de mensalidade registrado.
+                    </p>
+                    <p className="text-[11px] text-amber-300/90 mt-1">
+                      Você pode gerar o contrato de mensalidades agora com 1 clique para habilitar os recebimentos.
+                    </p>
                   </div>
-                </div>
 
-                {/* Opção Integrar no Livro Caixa */}
-                <div className="pt-4 border-t border-slate-800 mt-4">
-                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={recebimentoData.gerar_caixa}
-                      onChange={(e) =>
-                        setRecebimentoData({ ...recebimentoData, gerar_caixa: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-950 border-slate-700"
-                    />
-                    <span>
-                      Lançar automaticamente como <strong>Entrada</strong> no Livro Caixa diário
-                    </span>
-                  </label>
+                  <form onSubmit={handleGerarContratoRapido} className="mt-4 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Nº de Parcelas *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="48"
+                          required
+                          value={novoContratoData.n_parcelas}
+                          onChange={(e) =>
+                            setNovoContratoData({
+                              ...novoContratoData,
+                              n_parcelas: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Valor da Parcela (R$) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="1"
+                          required
+                          value={novoContratoData.valor_parcela}
+                          onChange={(e) =>
+                            setNovoContratoData({
+                              ...novoContratoData,
+                              valor_parcela: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          1º Vencimento *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={novoContratoData.data_pagar}
+                          onChange={(e) =>
+                            setNovoContratoData({
+                              ...novoContratoData,
+                              data_pagar: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-950 rounded-xl flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Valor Total do Contrato Calculado:</span>
+                      <span className="font-mono font-bold text-emerald-400 text-sm">
+                        {formatMoney(novoContratoData.n_parcelas * novoContratoData.valor_parcela)}
+                      </span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={gerandoContrato}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      <span>{gerandoContrato ? 'Gerando Plano...' : 'Gerar Contrato de Mensalidade e Habilitar Recebimento'}</span>
+                    </button>
+                  </form>
                 </div>
               </div>
-
-              {/* Botão de Quitação Principal */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submitting || Number(recebimentoData.valor_pago) <= 0}
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl transition-all shadow-lg shadow-emerald-950 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Check className="w-5 h-5" />
-                  <span>
-                    {submitting
-                      ? 'Processando Quitação...'
-                      : `Confirmar Recebimento de ${formatMoney(Number(recebimentoData.valor_pago))} (Enter)`}
-                  </span>
-                </button>
-              </div>
-            </form>
+            )
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
               <Receipt className="w-12 h-12 text-slate-700 mb-3" />
               <h4 className="text-base font-bold text-slate-400">Nenhum aluno selecionado</h4>
               <p className="text-xs text-slate-500 max-w-sm mt-1">
-                Utilize o campo de busca à esquerda para encontrar o aluno letra por letra e carregar seus dados financeiros.
+                Utilize o campo de busca à esquerda para pesquisar entre todos os alunos cadastrados e verificar mensalidades vencidas, a vencer ou pagas.
               </p>
             </div>
           )}

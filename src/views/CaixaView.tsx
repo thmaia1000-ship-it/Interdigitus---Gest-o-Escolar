@@ -106,7 +106,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   const [mensalidades, setMensalidades] = useState<any[]>([]);
   const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
   const [alunoSearchTerm, setAlunoSearchTerm] = useState('');
-  const [filtroApenasComSaldo, setFiltroApenasComSaldo] = useState(true);
+  const [modalStatusTab, setModalStatusTab] = useState<'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS'>('TODAS');
   const [recebimentoData, setRecebimentoData] = useState({
     valor_pago: 0,
     forma_pagamento: 'PIX',
@@ -132,9 +132,12 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
     })
     .slice(0, 10);
 
-  // Lista de Alunos filtrados letra por letra no Receber Mensalidade
+  // Lista de Alunos filtrados letra por letra no Receber Mensalidade abrangendo todos os nomes da tabela alunos
   const filteredMensalidadesModal = mensalidades.filter((m) => {
-    if (filtroApenasComSaldo && (m.saldo_devedor || 0) <= 0) return false;
+    if (modalStatusTab === 'VENCIDAS' && m.status_parcela !== 'VENCIDA') return false;
+    if (modalStatusTab === 'AVENCER' && m.status_parcela !== 'AVENCER') return false;
+    if (modalStatusTab === 'PAGAS' && m.status_parcela !== 'PAGA') return false;
+
     if (!alunoSearchTerm.trim()) return true;
 
     const term = normalizeSearch(alunoSearchTerm);
@@ -142,12 +145,17 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
     const cleanCpf = (m.cpf_aluno || '').replace(/[^\d]/g, '');
     const nomeAlunoNorm = normalizeSearch(m.nome_aluno || '');
     const cursoNorm = normalizeSearch(m.curso || '');
+    const statusNorm = normalizeSearch(m.status_parcela || '');
+    const statusLabelNorm = normalizeSearch(m.status_label || '');
 
     return (
       nomeAlunoNorm.includes(term) ||
       (cleanDigits.length >= 2 && cleanCpf.includes(cleanDigits)) ||
       cursoNorm.includes(term) ||
-      String(m.ID_mensalidade).includes(term)
+      statusNorm.includes(term) ||
+      statusLabelNorm.includes(term) ||
+      String(m.ID_mensalidade).includes(term) ||
+      String(m.idaluno).includes(term)
     );
   });
 
@@ -155,19 +163,16 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   useEffect(() => {
     if (alunoSearchTerm.trim() && filteredMensalidadesModal.length > 0) {
       const isAlreadyInList = filteredMensalidadesModal.some(
-        (m) => m.ID_mensalidade === selectedPlano?.ID_mensalidade
+        (m) =>
+          (m.ID_mensalidade && m.ID_mensalidade === selectedPlano?.ID_mensalidade) ||
+          (!m.ID_mensalidade && m.idaluno === selectedPlano?.idaluno)
       );
       if (!isAlreadyInList) {
         const first = filteredMensalidadesModal[0];
-        setSelectedPlano(first);
-        setRecebimentoData((prev) => ({
-          ...prev,
-          valor_pago: Math.min(first.valor_parcela || 0, first.saldo_devedor || 0),
-          observacao: `Recebimento Mensalidade Aluno: ${first.nome_aluno} (${first.curso})`,
-        }));
+        handleSelectPlano(first.ID_mensalidade || first.idaluno);
       }
     }
-  }, [alunoSearchTerm, filtroApenasComSaldo]);
+  }, [alunoSearchTerm, modalStatusTab]);
 
   const loadData = async () => {
     setLoading(true);
@@ -220,19 +225,18 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   const handleOpenReceberMensalidade = async () => {
     setMsg(null);
     setAlunoSearchTerm('');
-    setFiltroApenasComSaldo(true);
+    setModalStatusTab('TODAS');
     try {
-      const data = await api.getMensalidades();
+      const data = await api.getPesquisaAlunosMensalidades();
       setMensalidades(data);
       if (data.length > 0) {
-        const primeiroComSaldo = data.find((m: any) => m.saldo_devedor > 0) || data[0];
-        setSelectedPlano(primeiroComSaldo);
-        setRecebimentoData({
-          valor_pago: Math.min(primeiroComSaldo.valor_parcela || 0, primeiroComSaldo.saldo_devedor || 0),
-          forma_pagamento: 'PIX',
-          gerar_caixa: true,
-          observacao: `Recebimento Mensalidade Aluno: ${primeiroComSaldo.nome_aluno}`,
-        });
+        const primeiroComSaldo =
+          data.find((m: any) => m.status_parcela === 'VENCIDA') ||
+          data.find((m: any) => m.status_parcela === 'AVENCER') ||
+          data[0];
+        if (primeiroComSaldo) {
+          handleSelectPlano(primeiroComSaldo.ID_mensalidade || primeiroComSaldo.idaluno);
+        }
       }
       setIsReceberOpen(true);
     } catch (err: any) {
@@ -241,7 +245,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
   };
 
   const handleSelectPlano = (id: number) => {
-    const plano = mensalidades.find((m: any) => m.ID_mensalidade === id);
+    const plano = mensalidades.find((m: any) => m.ID_mensalidade === id || m.idaluno === id);
     if (!plano) return;
     setSelectedPlano(plano);
     setRecebimentoData((prev) => ({
@@ -805,19 +809,54 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
                     <Search className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Pesquisa Avançada por Nome do Aluno</span>
+                    <span>Pesquisa de Alunos (Base Completa)</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroApenasComSaldo(!filtroApenasComSaldo)}
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors flex items-center gap-1 ${
-                      filtroApenasComSaldo
-                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                        : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <span>{filtroApenasComSaldo ? 'Apenas com Saldo Aberto' : 'Todos os Contratos'}</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setModalStatusTab('TODAS')}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                        modalStatusTab === 'TODAS'
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalStatusTab('VENCIDAS')}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                        modalStatusTab === 'VENCIDAS'
+                          ? 'bg-rose-600 text-white font-bold'
+                          : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
+                      }`}
+                    >
+                      🔴 Vencidas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalStatusTab('AVENCER')}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                        modalStatusTab === 'AVENCER'
+                          ? 'bg-amber-600 text-white font-bold'
+                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                      }`}
+                    >
+                      🟡 A Vencer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalStatusTab('PAGAS')}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                        modalStatusTab === 'PAGAS'
+                          ? 'bg-emerald-600 text-white font-bold'
+                          : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                      }`}
+                    >
+                      🟢 Pagas
+                    </button>
+                  </div>
                 </div>
 
                 <div className="relative">
@@ -825,7 +864,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Digite o nome do aluno letra por letra (ex: Maria, João)..."
+                    placeholder="Digite o nome do aluno, CPF ou curso letra por letra..."
                     value={alunoSearchTerm}
                     onChange={(e) => setAlunoSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
@@ -845,7 +884,7 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                 {alunoSearchTerm && (
                   <div className="flex items-center justify-between text-[11px] text-emerald-800 font-medium px-1">
                     <span>
-                      Buscando: <strong>"{alunoSearchTerm}"</strong>
+                      Buscando: <strong>"{alunoSearchTerm}"</strong> ({modalStatusTab})
                     </span>
                     <span className="font-mono bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">
                       {filteredMensalidadesModal.length} aluno(s) encontrado(s)
@@ -861,11 +900,13 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                     </div>
                   ) : (
                     filteredMensalidadesModal.map((m) => {
-                      const isSelected = selectedPlano?.ID_mensalidade === m.ID_mensalidade;
+                      const isSelected =
+                        (m.ID_mensalidade && selectedPlano?.ID_mensalidade === m.ID_mensalidade) ||
+                        (!m.ID_mensalidade && selectedPlano?.idaluno === m.idaluno);
                       return (
                         <div
-                          key={m.ID_mensalidade}
-                          onClick={() => handleSelectPlano(m.ID_mensalidade)}
+                          key={`${m.idaluno}-${m.ID_mensalidade || 'sem'}`}
+                          onClick={() => handleSelectPlano(m.ID_mensalidade || m.idaluno)}
                           className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between gap-3 ${
                             isSelected
                               ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
@@ -888,19 +929,47 @@ export const CaixaView: React.FC<CaixaViewProps> = ({
                                 </span>
                               </div>
                               <div className="text-[11px] text-slate-500 truncate">
-                                {highlightMatch(m.curso, alunoSearchTerm)} · Parc. {m.parcelas_pagas || 0}/{m.n_parcelas} · R${' '}
-                                {(m.valor_parcela || 0).toFixed(2)}/mês
+                                {highlightMatch(m.curso, alunoSearchTerm)}
+                                {m.tem_contrato && ` · Parc. ${m.parcelas_pagas || 0}/${m.n_parcelas}`}
+                              </div>
+                              <div className="mt-0.5">
+                                {m.status_parcela === 'VENCIDA' && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200">
+                                    VENCIDA {m.dias_atraso > 0 ? `(${m.dias_atraso}d)` : ''}
+                                  </span>
+                                )}
+                                {m.status_parcela === 'AVENCER' && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold border border-amber-200">
+                                    A VENCER
+                                  </span>
+                                )}
+                                {m.status_parcela === 'PAGA' && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                                    PAGA (Quitada)
+                                  </span>
+                                )}
+                                {m.status_parcela === 'SEM_CONTRATO' && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
+                                    Sem Contrato
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className="text-[10px] text-slate-400 block">Saldo Devedor</span>
+                            <span className="text-[10px] text-slate-400 block">Saldo</span>
                             <span
                               className={`font-mono font-bold text-xs ${
-                                (m.saldo_devedor || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
+                                m.status_parcela === 'VENCIDA'
+                                  ? 'text-rose-700'
+                                  : m.status_parcela === 'AVENCER'
+                                  ? 'text-amber-700'
+                                  : m.status_parcela === 'PAGA'
+                                  ? 'text-emerald-700'
+                                  : 'text-slate-500'
                               }`}
                             >
-                              {formatMoney(m.saldo_devedor)}
+                              {m.tem_contrato ? formatMoney(m.saldo_devedor) : 'R$ 0,00'}
                             </span>
                           </div>
                         </div>

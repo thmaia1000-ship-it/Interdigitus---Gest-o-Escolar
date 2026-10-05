@@ -873,6 +873,198 @@ class DatabaseManager {
     });
   }
 
+  // 8.1 PESQUISA EXPANDIDA PARA TODOS OS ALUNOS COM STATUS DE MENSALIDADES (VENCIDAS, A VENCER, PAGAS)
+  public getPesquisaAlunosMensalidades(params: {
+    search?: string;
+    statusFiltro?: 'TODAS' | 'VENCIDAS' | 'AVENCER' | 'PAGAS' | 'SEM_CONTRATO';
+  }) {
+    const today = new Date().toISOString().split('T')[0];
+    const normalize = (str: string = '') =>
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+    const q = params.search ? normalize(params.search) : '';
+    const cleanDigits = params.search ? params.search.replace(/[^\d]/g, '') : '';
+    const filtro = params.statusFiltro || 'TODAS';
+
+    // Lista abrangendo TODOS os nomes da tabela tb_alunos
+    const results: any[] = [];
+
+    for (const aluno of this.memDb.tb_alunos) {
+      const cursoDb = aluno.idcurso ? this.memDb.tb_cursos.find((c) => c.ID_curso === aluno.idcurso) : null;
+      const nomeCurso = cursoDb?.nome_curso || (aluno.idcurso ? `Curso #${aluno.idcurso}` : 'Geral');
+
+      // Buscar contratos deste aluno
+      const contratos = this.memDb.tb_mensalidades.filter((m) => m.idaluno === aluno.ID_aluno);
+
+      if (contratos.length > 0) {
+        for (const m of contratos) {
+          const saldo = Number(m.saldo_devedor) || 0;
+          const parcelasPagas = parseInt(m.parcelas_pagas || '0', 10);
+          const nParcelas = parseInt(m.n_parcelas || '1', 10);
+          const dataVenc = m.data_pagar || m.data_fim || '';
+
+          let statusParcela: 'VENCIDA' | 'AVENCER' | 'PAGA';
+          let statusLabel = '';
+          let diasAtraso = 0;
+
+          if (saldo <= 0 || parcelasPagas >= nParcelas) {
+            statusParcela = 'PAGA';
+            statusLabel = 'Paga (Quitada)';
+          } else if (dataVenc && dataVenc < today) {
+            statusParcela = 'VENCIDA';
+            statusLabel = 'Vencida';
+            const diffTime = Math.abs(new Date(today).getTime() - new Date(dataVenc).getTime());
+            diasAtraso = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          } else {
+            statusParcela = 'AVENCER';
+            statusLabel = 'A Vencer';
+          }
+
+          results.push({
+            ID_mensalidade: m.ID_mensalidade,
+            idaluno: aluno.ID_aluno,
+            nome_aluno: aluno.nome_aluno,
+            cpf_aluno: aluno.cpf || '-',
+            email_aluno: aluno.email || '',
+            telefone_aluno: aluno.telefone || '',
+            curso: m.curso || nomeCurso,
+            valor_total: Number(m.valor_total) || 0,
+            saldo_devedor: saldo,
+            valor_parcela: Number(m.valor_parcela) || 0,
+            n_parcelas: nParcelas,
+            parcelas_pagas: parcelasPagas,
+            proxima_parcela: Math.min(nParcelas, parcelasPagas + 1),
+            data_pagar: dataVenc,
+            status_parcela: statusParcela,
+            status_label: statusLabel,
+            dias_atraso: diasAtraso,
+            tem_contrato: true,
+            status_aluno: aluno.status || 'Ativo',
+          });
+        }
+      } else {
+        // Aluno da tabela tb_alunos que ainda não possui mensalidade cadastrada
+        results.push({
+          ID_mensalidade: null,
+          idaluno: aluno.ID_aluno,
+          nome_aluno: aluno.nome_aluno,
+          cpf_aluno: aluno.cpf || '-',
+          email_aluno: aluno.email || '',
+          telefone_aluno: aluno.telefone || '',
+          curso: nomeCurso,
+          valor_total: 0,
+          saldo_devedor: 0,
+          valor_parcela: 0,
+          n_parcelas: 0,
+          parcelas_pagas: 0,
+          proxima_parcela: 0,
+          data_pagar: '',
+          status_parcela: 'SEM_CONTRATO',
+          status_label: 'Sem Contrato',
+          dias_atraso: 0,
+          tem_contrato: false,
+          status_aluno: aluno.status || 'Ativo',
+        });
+      }
+    }
+
+    // Filtragem por busca textual letra por letra
+    let filtered = results;
+    if (q) {
+      filtered = filtered.filter((item) => {
+        const nomeNorm = normalize(item.nome_aluno);
+        const cpfItem = (item.cpf_aluno || '').replace(/[^\d]/g, '');
+        const cursoNorm = normalize(item.curso);
+        const statusNorm = normalize(item.status_parcela);
+        const labelNorm = normalize(item.status_label);
+
+        return (
+          nomeNorm.includes(q) ||
+          (cleanDigits.length >= 2 && cpfItem.includes(cleanDigits)) ||
+          cursoNorm.includes(q) ||
+          statusNorm.includes(q) ||
+          labelNorm.includes(q) ||
+          String(item.idaluno).includes(q) ||
+          (item.ID_mensalidade && String(item.ID_mensalidade).includes(q))
+        );
+      });
+    }
+
+    // Filtragem por abas de status
+    if (filtro === 'VENCIDAS') {
+      filtered = filtered.filter((i) => i.status_parcela === 'VENCIDA');
+    } else if (filtro === 'AVENCER') {
+      filtered = filtered.filter((i) => i.status_parcela === 'AVENCER');
+    } else if (filtro === 'PAGAS') {
+      filtered = filtered.filter((i) => i.status_parcela === 'PAGA');
+    } else if (filtro === 'SEM_CONTRATO') {
+      filtered = filtered.filter((i) => i.status_parcela === 'SEM_CONTRATO');
+    }
+
+    // Ordenação: primeiro Vencidas (mais atrasadas no topo), depois A Vencer, Pagas, Sem Contrato
+    filtered.sort((a, b) => {
+      const prioridade: Record<string, number> = {
+        VENCIDA: 1,
+        AVENCER: 2,
+        PAGA: 3,
+        SEM_CONTRATO: 4,
+      };
+      const pA = prioridade[a.status_parcela] || 5;
+      const pB = prioridade[b.status_parcela] || 5;
+      if (pA !== pB) return pA - pB;
+      if (a.status_parcela === 'VENCIDA' && b.status_parcela === 'VENCIDA') {
+        return (b.dias_atraso || 0) - (a.dias_atraso || 0);
+      }
+      return a.nome_aluno.localeCompare(b.nome_aluno);
+    });
+
+    return filtered;
+  }
+
+  // Criação rápida de contrato para aluno existente
+  public gerarContratoMensalidadeRapido(
+    payload: {
+      idaluno: number;
+      valor_total: number;
+      n_parcelas: number;
+      valor_parcela: number;
+      curso?: string;
+      data_pagar?: string;
+    },
+    operatorUser: string
+  ): Mensalidade {
+    const aluno = this.memDb.tb_alunos.find((a) => a.ID_aluno === payload.idaluno);
+    if (!aluno) throw new Error('Aluno não encontrado.');
+
+    const cursoDb = aluno.idcurso ? this.memDb.tb_cursos.find((c) => c.ID_curso === aluno.idcurso) : null;
+    const curso = payload.curso || cursoDb?.nome_curso || 'Geral';
+    const now = new Date();
+    const dataAtual = now.toISOString().split('T')[0];
+    const nParc = payload.n_parcelas || 10;
+    const vParc = payload.valor_parcela || 150;
+    const vTotal = payload.valor_total || nParc * vParc;
+    const dataFim = new Date(Date.now() + nParc * 30 * 24 * 3600 * 1000).toISOString().split('T')[0];
+
+    const novaMensalidade: Omit<Mensalidade, 'ID_mensalidade'> = {
+      entrada: 0,
+      n_parcelas: String(nParc),
+      valor_total: vTotal,
+      saldo_devedor: vTotal,
+      valor_parcela: vParc,
+      data_pagar: payload.data_pagar || dataAtual,
+      data_inicio: dataAtual,
+      data_fim: dataFim,
+      parcelas_pagas: '0',
+      data_gerada: dataAtual,
+      usuario: operatorUser,
+      horario: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      curso: curso,
+      idaluno: aluno.ID_aluno,
+    };
+
+    return this.createMensalidade(novaMensalidade, operatorUser);
+  }
+
   public createMensalidade(data: Omit<Mensalidade, 'ID_mensalidade'>, operatorUser: string): Mensalidade {
     const nextId = this.memDb.tb_mensalidades.reduce((max, m) => Math.max(max, m.ID_mensalidade), 0) + 1;
     const now = new Date();

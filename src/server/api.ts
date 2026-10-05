@@ -489,6 +489,29 @@ apiRouter.get('/mensalidades', requireAuth, requireRole('Financeiro', 'Secretari
   return res.json(list);
 });
 
+// Pesquisa expandida em todos os alunos da tabela tb_alunos com status (vencidas, a vencer, pagas)
+apiRouter.get('/mensalidades/alunos-completo', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
+  try {
+    const list = db.getPesquisaAlunosMensalidades({
+      search: req.query.search as string,
+      statusFiltro: req.query.status as any,
+    });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/mensalidades/rapido', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
+  try {
+    const operator = (req as any).user.username;
+    const item = db.gerarContratoMensalidadeRapido(req.body, operator);
+    return res.status(201).json(item);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/mensalidades', requireAuth, requireRole('Financeiro', 'Secretaria'), (req, res) => {
   try {
     const operator = (req as any).user.username;

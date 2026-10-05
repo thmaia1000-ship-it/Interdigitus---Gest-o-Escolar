@@ -256,6 +256,19 @@ export const api = {
     return request<any[]>(`/mensalidades?${q.toString()}`);
   },
 
+  getPesquisaAlunosMensalidades: (params: { search?: string; status?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (params.search) q.append('search', params.search);
+    if (params.status) q.append('status', params.status);
+    return request<any[]>(`/mensalidades/alunos-completo?${q.toString()}`);
+  },
+
+  gerarContratoMensalidadeRapido: (data: any) =>
+    request<any>('/mensalidades/rapido', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   createMensalidade: (data: any) =>
     request<any>('/mensalidades', {
       method: 'POST',
