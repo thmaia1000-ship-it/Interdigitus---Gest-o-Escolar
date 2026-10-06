@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+@theme {
+  /* Paleta Azul Elétrico derivada do Centro da Imagem de Fundo e da Logo CEPI */
+  --color-indigo-50: #eef4ff;
+  --color-indigo-100: #dce7fe;
+  --color-indigo-200: #bed3fd;
+  --color-indigo-300: #90b5fc;
+  --color-indigo-400: #5b8ef9;
+  --color-indigo-500: #2a6bf5;
+  --color-indigo-600: #0a4be3; /* Azul Real / Elétrico da Logo e Centro do Fundo */
+  --color-indigo-700: #0037b3;
+  --color-indigo-800: #00298a;
+  --color-indigo-900: #031448;
+  --color-indigo-950: #020720;
+
+  --color-blue-500: #2a6bf5;
+  --color-blue-600: #0a4be3;
+  --color-blue-700: #0037b3;
+  --color-blue-800: #00298a;
+
+  /* Amarelo Ouro / Dourado da Logo CEPI (Letra P e Cruz) */
+  --color-cepi-gold: #fbbf24;
+  --color-cepi-gold-dark: #f59e0b;
+
+  /* Cores do Fundo Tecnológico */
+  --color-cepi-navy: #02071a;
+  --color-cepi-deepblue: #030a28;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
@@ -9,6 +37,8 @@
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     overscroll-behavior-y: none;
+    background-color: #02071a;
+    color: #0f172a;
   }
 
   /* Prevent iOS zoom on input focus when font-size is below 16px */
@@ -39,4 +69,83 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.5);
+}
+
+/* =========================================================================
+   ESTILOS DE FUNDO DO SISTEMA BASEADOS NA IMAGEM CARREGADA
+   ========================================================================= */
+
+.system-bg-wrapper {
+  background-color: #02071a;
+  background-image: 
+    radial-gradient(ellipse at 50% 20%, rgba(10, 75, 227, 0.4) 0%, rgba(2, 7, 26, 0.92) 80%),
+    url('/bg-system.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Legibilidade em títulos externos sobre o fundo escuro do sistema */
+.system-bg-wrapper h1.text-slate-900,
+.system-bg-wrapper h2.text-slate-900:not(.bg-white *):not([class*="bg-emerald"] *),
+.system-bg-wrapper .page-title {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.system-bg-wrapper p.text-slate-500:not(.bg-white *),
+.system-bg-wrapper span.text-slate-500:not(.bg-white *):not(table *) {
+  color: #93c5fd !important;
+}
+
+/* =========================================================================
+   ESTILIZAÇÃO DOS BOTÕES NA COR DO FUNDO E DA LOGO CEPI
+   ========================================================================= */
+
+/* Botões com ação primária (Azul Elétrico da Logo e Fundo) */
+button[class*="bg-indigo-600"],
+button[class*="bg-blue-600"],
+a[class*="bg-indigo-600"],
+a[class*="bg-blue-600"],
+.btn-primary-cepi {
+  background: linear-gradient(135deg, #0a4be3 0%, #0033b0 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px 0 rgba(10, 75, 227, 0.4) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button[class*="bg-indigo-600"]:hover,
+button[class*="bg-blue-600"]:hover,
+a[class*="bg-indigo-600"]:hover,
+a[class*="bg-blue-600"]:hover,
+.btn-primary-cepi:hover {
+  background: linear-gradient(135deg, #1d64f2 0%, #0a4be3 100%) !important;
+  box-shadow: 0 6px 22px 0 rgba(10, 75, 227, 0.65) !important;
+  transform: translateY(-1px);
+}
+
+button[class*="bg-indigo-600"]:active,
+button[class*="bg-blue-600"]:active,
+a[class*="bg-indigo-600"]:active,
+a[class*="bg-blue-600"]:active,
+.btn-primary-cepi:active {
+  transform: translateY(0);
+}
+
+/* Botões de Ação Secundária / Destaque com o Amarelo Ouro da Logo */
+.btn-gold-cepi {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  color: #02071a !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.35) !important;
+  border: 1px solid rgba(253, 224, 71, 0.4) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn-gold-cepi:hover {
+  background: linear-gradient(135deg, #fde047 0%, #fbbf24 100%) !important;
+  box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.55) !important;
+  transform: translateY(-1px);
 }

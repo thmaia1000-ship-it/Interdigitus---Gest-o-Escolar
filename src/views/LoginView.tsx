@@ -35,31 +35,36 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
-      {/* Container Principal */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="min-h-screen relative flex flex-col justify-center items-center p-4 system-bg-wrapper">
+      {/* Container Principal Glassmorphism */}
+      <div className="w-full max-w-md bg-slate-950/85 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-500/30 overflow-hidden shadow-blue-950/80">
         {/* Header Visual */}
-        <div className="bg-indigo-950 p-6 text-white text-center border-b border-indigo-900/60">
-          <div className="inline-flex p-3 bg-indigo-800/60 rounded-xl mb-3 border border-indigo-700/50">
-            <GraduationCap className="w-8 h-8 text-indigo-300" />
+        <div className="px-6 pt-8 pb-6 text-white text-center border-b border-slate-800/80 bg-gradient-to-b from-blue-950/40 to-transparent">
+          <div className="flex justify-center items-center">
+            <img
+              src="/logo-login.png"
+              alt="Master Escolar"
+              className="h-20 sm:h-24 w-auto max-w-[240px] object-contain drop-shadow-lg transition-transform hover:scale-105 duration-200"
+            />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Interdigitus</h1>
-          <p className="text-xs text-indigo-200/80 mt-1">
-            Sistema de Gestão Escolar · Banco dbinterdigitus
+          <p className="text-xs text-blue-300 mt-3 font-semibold tracking-wide">
+            Master Escolar - Sistema de Gestão Escolar
           </p>
         </div>
 
         {/* Segmented Control */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200">
-          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/70 rounded-lg">
+        <div className="p-3 bg-slate-900/70 border-b border-slate-800/80">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800/60">
             <button
               type="button"
               onClick={() => {
                 setTab('operador');
                 setError(null);
               }}
-              className={`py-2 text-xs font-semibold rounded-md transition-all ${
-                tab === 'operador' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                tab === 'operador'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/40 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Operador Interno
@@ -70,8 +75,10 @@ export const LoginView: React.FC = () => {
                 setTab('aluno');
                 setError(null);
               }}
-              className={`py-2 text-xs font-semibold rounded-md transition-all ${
-                tab === 'aluno' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                tab === 'aluno'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/40 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Portal do Aluno
@@ -82,8 +89,8 @@ export const LoginView: React.FC = () => {
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+            <div className="p-3 bg-rose-950/60 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -91,52 +98,52 @@ export const LoginView: React.FC = () => {
           {tab === 'operador' ? (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nome de Usuário</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nome de Usuário</label>
                 <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Digite seu usuário..."
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-900/90 text-white placeholder:text-slate-500 border border-slate-700/80 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Senha de Acesso</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Senha de Acesso</label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-900/90 text-white placeholder:text-slate-500 border border-slate-700/80 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
                 />
               </div>
             </>
           ) : (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">CPF do Aluno</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">CPF do Aluno</label>
                 <input
                   type="text"
                   required
                   value={cpf}
                   onChange={(e) => setCpf(e.target.value)}
                   placeholder="000.000.000-00"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-900/90 text-white placeholder:text-slate-500 border border-slate-700/80 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Senha do Aluno</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Senha do Aluno</label>
                 <input
                   type="password"
                   required
                   value={alunoPass}
                   onChange={(e) => setAlunoPass(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-900/90 text-white placeholder:text-slate-500 border border-slate-700/80 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
                 />
               </div>
             </>
@@ -145,7 +152,7 @@ export const LoginView: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 px-4 btn-primary-cepi text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
           >
             {loading ? (
               <span>Autenticando...</span>
@@ -159,9 +166,9 @@ export const LoginView: React.FC = () => {
         </form>
       </div>
 
-      <div className="mt-4 text-xs text-slate-500 text-center">
-        Banco MySQL de Referência: <code className="font-mono text-slate-400">dbinterdigitus (18 tabelas)</code>
-      </div>
+      <footer className="mt-6 text-xs text-blue-300/80 text-center font-medium tracking-wide">
+        Desenvolvido por Br3Tech - Todos os direitos reservados
+      </footer>
     </div>
   );
 };

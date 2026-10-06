@@ -1686,6 +1686,11 @@ export const ReceberMensalidadeView: React.FC<ReceberMensalidadeViewProps> = ({ 
           )}
         </div>
       </div>
+
+      {/* Rodapé Br3Tech */}
+      <footer className="py-2.5 px-4 text-center text-xs text-blue-300/70 border-t border-slate-800 bg-slate-950 shrink-0">
+        Desenvolvido por Br3Tech - Todos os direitos reservados
+      </footer>
     </div>
   );
 };

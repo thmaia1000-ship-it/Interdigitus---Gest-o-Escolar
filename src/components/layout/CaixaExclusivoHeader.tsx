@@ -60,16 +60,18 @@ export const CaixaExclusivoHeader: React.FC<CaixaExclusivoHeaderProps> = ({ onEx
   };
 
   return (
-    <header className="bg-slate-950 text-white border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-lg shrink-0">
+    <header className="bg-[#02071a]/95 text-white border-b border-blue-900/40 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xl shadow-blue-950/30 shrink-0">
       {/* Esquerda: Identificação do Terminal Exclusivo */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/50">
-          <Wallet className="w-5 h-5 text-emerald-100" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="CEPI Logo"
+          className="h-10 w-auto max-w-[48px] object-contain drop-shadow-sm shrink-0"
+        />
         <div>
           <div className="flex items-center gap-2">
             <span className="font-extrabold text-sm sm:text-base tracking-tight text-white">
-              INTERDIGITUS
+              Master Escolar
             </span>
             <span className="text-slate-600">|</span>
             <span className="text-xs sm:text-sm font-semibold text-emerald-400 uppercase tracking-wider font-mono">

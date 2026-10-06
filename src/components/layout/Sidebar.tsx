@@ -455,16 +455,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Painel lateral deslizante */}
-          <aside className="relative w-72 max-w-[85vw] bg-slate-900 text-slate-300 flex flex-col h-full z-10 shadow-2xl border-r border-slate-800 animate-in slide-in-from-left duration-200">
+          <aside className="relative w-72 max-w-[85vw] bg-[#02071a]/95 text-slate-300 flex flex-col h-full z-10 shadow-2xl border-r border-blue-950/60 animate-in slide-in-from-left duration-200">
             {/* Topo da Gaveta */}
-            <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0">
+            <div className="h-16 px-4 border-b border-blue-950/60 flex items-center justify-between bg-[#010412] shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-                  ID
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="Master Escolar"
+                  className="h-9 w-auto max-w-[44px] object-contain shrink-0 drop-shadow-sm"
+                />
                 <div>
-                  <div className="font-bold text-sm tracking-tight text-white leading-tight">INTERDIGITUS</div>
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Gestão Escolar</div>
+                  <div className="font-bold text-sm tracking-tight text-white leading-tight">Master Escolar</div>
+                  <div className="text-[10px] text-blue-300/70 uppercase tracking-wider font-mono">Gestão Escolar</div>
                 </div>
               </div>
               <button
@@ -481,9 +483,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {renderNavContent(true)}
 
             {/* Rodapé Móvel */}
-            <div className="p-3 border-t border-slate-800 bg-slate-950/90 text-[11px] text-slate-500 shrink-0 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-              <div className="font-medium text-slate-400">{user?.nome}</div>
-              <div className="text-[10px] text-indigo-400 font-mono">Perfil: {user?.role}</div>
+            <div className="p-3 border-t border-blue-950/60 bg-[#010412]/90 text-[11px] text-slate-500 shrink-0 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+              <div className="font-medium text-slate-300">{user?.nome}</div>
+              <div className="text-[10px] text-blue-400 font-mono">Desenvolvido por Br3Tech</div>
             </div>
           </aside>
         </div>
@@ -491,26 +493,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. SIDEBAR DESKTOP FIXA (>= lg) */}
       <aside
-        className={`hidden lg:flex bg-slate-900 text-slate-300 flex-col shrink-0 border-r border-slate-800 transition-all duration-200 select-none ${
+        className={`hidden lg:flex bg-[#02071a]/95 text-slate-300 flex-col shrink-0 border-r border-blue-950/60 transition-all duration-200 select-none ${
           collapsed ? 'w-18' : 'w-68'
         }`}
       >
         {/* Brand Header Desktop */}
-        <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0">
+        <div className="h-16 px-4 border-b border-blue-950/60 flex items-center justify-between bg-[#010412] shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-                ID
-              </div>
+              <img
+                src="/logo.png"
+                alt="Master Escolar"
+                className="h-9 w-auto max-w-[44px] object-contain shrink-0 drop-shadow-sm"
+              />
               <div>
-                <div className="font-bold text-sm tracking-tight text-white leading-tight">INTERDIGITUS</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Gestão Escolar</div>
+                <div className="font-bold text-sm tracking-tight text-white leading-tight">Master Escolar</div>
+                <div className="text-[10px] text-blue-300/70 uppercase tracking-wider font-mono">Gestão Escolar</div>
               </div>
             </div>
           )}
           {collapsed && (
-            <div className="mx-auto w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
-              ID
+            <div className="mx-auto flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="Master Escolar"
+                className="h-8 w-auto max-w-[36px] object-contain drop-shadow-sm"
+              />
             </div>
           )}
           <button
@@ -527,9 +535,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Rodapé Desktop */}
         {!collapsed && (
-          <div className="p-3 border-t border-slate-800 bg-slate-950/70 text-[11px] text-slate-500 shrink-0">
-            <div>dbinterdigitus · MySQL 8.x</div>
-            <div className="text-[10px] text-slate-600">18 tabelas operacionais</div>
+          <div className="p-3 border-t border-blue-950/60 bg-[#010412]/90 text-[11px] text-slate-400 shrink-0">
+            <div className="font-semibold text-slate-200">Master Escolar</div>
+            <div className="text-[10px] text-blue-300/70">Desenvolvido por Br3Tech</div>
           </div>
         )}
       </aside>

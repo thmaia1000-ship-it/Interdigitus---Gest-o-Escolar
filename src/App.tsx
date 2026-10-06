@@ -63,10 +63,10 @@ function MainApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-300">
-        <div className="flex items-center gap-3">
-          <Clock className="w-5 h-5 animate-spin text-indigo-500" />
-          <span className="text-sm font-medium">Iniciando sistema Interdigitus...</span>
+      <div className="min-h-screen flex items-center justify-center system-bg-wrapper text-slate-100">
+        <div className="flex items-center gap-3 p-5 bg-slate-950/80 backdrop-blur-md rounded-2xl border border-blue-500/30 shadow-2xl shadow-blue-950/80">
+          <Clock className="w-5 h-5 animate-spin text-blue-400" />
+          <span className="text-sm font-medium text-blue-100">Iniciando sistema Master Escolar...</span>
         </div>
       </div>
     );
@@ -202,7 +202,7 @@ function MainApp() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen overflow-hidden font-sans relative system-bg-wrapper">
       <Sidebar
         currentPath={currentPath}
         onNavigate={(path) => {
@@ -212,7 +212,7 @@ function MainApp() {
         isOpenMobile={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
       />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         <Header
           currentPath={currentPath}
           onNavigate={(path) => {
@@ -221,7 +221,14 @@ function MainApp() {
           }}
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
         />
-        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0 flex flex-col justify-between">
+          <div className="flex-1">
+            {renderContent()}
+          </div>
+          <footer className="py-3 px-6 text-center text-xs text-blue-300/70 border-t border-blue-900/30 bg-[#02071a]/70 backdrop-blur-md shrink-0">
+            Desenvolvido por Br3Tech - Todos os direitos reservados
+          </footer>
+        </main>
         <MobileBottomNav
           currentPath={currentPath}
           onNavigate={(path) => {
