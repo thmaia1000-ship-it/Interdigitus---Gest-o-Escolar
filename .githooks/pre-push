@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+echo "🚀 [Git Hook: pre-push] Verificando dados do banco antes de enviar para o GitHub..."
+
+if command -v bun >/dev/null 2>&1; then
+  bun scripts/sync_db.ts --check-push
+elif command -v npx >/dev/null 2>&1; then
+  npx tsx scripts/sync_db.ts --check-push
+fi
+
+echo "✅ [Git Hook: pre-push] Banco validado com sucesso. Prosseguindo com o git push..."

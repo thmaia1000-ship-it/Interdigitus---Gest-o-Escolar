@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+echo "📦 [Git Hook: pre-commit] Sincronizando data_interdigitus.json e db_summary.json..."
+
+if command -v bun >/dev/null 2>&1; then
+  bun scripts/sync_db.ts --stage
+elif command -v npx >/dev/null 2>&1; then
+  npx tsx scripts/sync_db.ts --stage
+fi

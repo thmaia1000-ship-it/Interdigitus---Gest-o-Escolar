@@ -179,29 +179,36 @@ MYSQL_DATABASE=dbinterdigitus
 
 ---
 
-## 📦 Instruções para Publicação no GitHub
+## 📦 Sincronização do Banco de Dados e Publicação no GitHub & Google AI Studio
 
-Para publicar este código no seu repositório pessoal ou institucional no GitHub:
+Para garantir que toda a base de dados (`data_interdigitus.json` com os 157k+ registros) seja sempre enviada junto com o código para o **GitHub**, permitindo o uso imediato na plataforma **Google AI Studio** e em publicações na nuvem (Vercel, Docker, Google Cloud Run):
 
-1. Crie um novo repositório vazio no [GitHub](https://github.com/new) (ex: `interdigitus-gestao-escolar`).
-2. No terminal do projeto, execute os comandos:
+### 1. Envio Automatizado em 1 Comando (Recomendado)
+Execute a qualquer momento para validar a base, gerar o resumo e enviar para o GitHub:
 
 ```bash
-# Inicializar o repositório git (se ainda não inicializado)
-git init
-
-# Adicionar todos os arquivos
-git add .
-
-# Criar o commit inicial
-git commit -m "feat: release inicial do sistema Interdigitus (dbinterdigitus)"
-
-# Definir a branch principal como main
-git branch -M main
-
-# Vincular ao seu repositório remoto no GitHub
-git remote add origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
-
-# Enviar os arquivos para o GitHub
-git push -u origin main
+bun run push:github
+# ou com npm:
+npm run push:github
 ```
+
+Você também pode fornecer uma mensagem de commit personalizada:
+```bash
+./scripts/push_to_github.sh "sua mensagem de commit aqui"
+```
+
+### 2. Ativação dos Git Hooks Automáticos
+Para que **todo** `git commit` ou `git push` normal inclua automaticamente o banco de dados sem que você precise lembrar:
+
+```bash
+git config core.hooksPath .githooks
+```
+*A partir disso, sempre que você rodar `git commit` ou `git push`, os arquivos `data_interdigitus.json` e `db_summary.json` serão verificados e adicionados automaticamente.*
+
+### 3. Integração com Google AI Studio e Publicação Web
+- **Arquivo Principal de Dados**: `data_interdigitus.json` (persistência relacional completa de todas as 18 tabelas).
+- **Arquivo de Metadados / Resumo**: `db_summary.json` (metadados ultra-rápidos e contagem de registros para diagnósticos leves e IAs).
+- **Endpoint HTTP de Diagnóstico**: `GET /api/database/summary` e `GET /api/database/export-json`.
+- **Deploy Serverless / Vercel**: Já configurado no `vercel.json` com `includeFiles: "{data_interdigitus.json,db_summary.json}"`.
+- **Docker / Cloud Run**: O `Dockerfile` empacota e inicia a aplicação com os dados completos prontos para produção.
+

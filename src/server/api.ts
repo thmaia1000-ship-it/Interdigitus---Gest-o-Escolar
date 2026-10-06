@@ -231,6 +231,29 @@ apiRouter.get('/database/export-json', (req: Request, res: Response) => {
   return res.json(db.getRawDb());
 });
 
+// Resumo do Banco de Dados para diagnósticos, Google AI Studio e publicação web
+apiRouter.get('/database/summary', (req: Request, res: Response) => {
+  const rawDb = db.getRawDb();
+  const tables: Record<string, number> = {};
+  let totalRecords = 0;
+  for (const [key, val] of Object.entries(rawDb)) {
+    if (Array.isArray(val)) {
+      tables[key] = val.length;
+      totalRecords += val.length;
+    }
+  }
+  return res.json({
+    status: 'ok',
+    updatedAt: new Date().toISOString(),
+    database: 'dbinterdigitus',
+    totalRecords,
+    tablesCount: Object.keys(tables).length,
+    tables,
+    system: 'Master Escolar - Sistema de Gestão Escolar',
+    provider: 'Br3Tech',
+  });
+});
+
 // Dashboard Geral
 apiRouter.get('/dashboard/stats', requireAuth, (req: Request, res: Response) => {
   const stats = db.getDashboardStats();

@@ -9,7 +9,11 @@
     "start": "tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "sync:db": "tsx scripts/sync_db.ts",
+    "export:db": "tsx scripts/sync_db.ts",
+    "push:github": "bash scripts/push_to_github.sh",
+    "setup:hooks": "bash scripts/setup_git_hooks.sh"
   },
   "engines": {
     "node": ">=20.x"
